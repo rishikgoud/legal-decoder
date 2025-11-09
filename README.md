@@ -25,6 +25,16 @@ The main idea behind Legal Decoder is to make legal transparency accessible to e
 -   **Clause Explorer**: An educational hub to learn about the most common legal clauses, their purpose, and their standard wording.
 -   **Secure User Authentication**: User accounts and data are managed securely, ensuring that all contract analyses are private.
 
+## AI Impact Statement
+
+The Legal Decoder utilizes advanced AI models—primarily GPT-5, integrated with specialized legal NLP pipelines—to interpret, summarize, and extract key elements from complex legal documents. The AI automates tasks such as clause detection, risk flagging, compliance validation, and language simplification, helping users and legal teams accelerate document review and decision-making with greater accuracy.
+
+Our data sources include publicly available and appropriately licensed legal datasets, supplemented by anonymized, consent-based user data to enhance contextual understanding. All data handling complies with GDPR, CCPA, and enterprise data governance standards, ensuring no sensitive or client-identifiable information is used without authorization.
+
+To mitigate hallucinations or bias, Legal Decoder employs layered guardrails—rule-based verification, contextual confidence scoring, and human-in-the-loop validation. The system’s outputs are continuously benchmarked against legal standards and reviewed for fairness, consistency, and factual grounding.
+
+The expected outcomes are improved legal workflow efficiency (up to 60% reduction in manual review time), better risk visibility, and enhanced user trust. By offering transparent, auditable reasoning and controlled output generation, Legal Decoder strengthens legal accuracy and safety while maintaining human oversight in every critical decision.
+
 ## 🧰 Technology Stack
 
 | Category         | Tools / Technologies                                                              |
@@ -47,8 +57,8 @@ The main idea behind Legal Decoder is to make legal transparency accessible to e
 ## 🚀 Product Demo
 
 -   **Live Demo / Prototype**: https://legal-decoder.vercel.app/
--   **Demo Video**: [Insert video link — YouTube, Loom, or Google Drive]
--   **Presentation Deck**: [Insert link to Google Slides or PDF presentation]
+-   **Demo Video**: https://drive.google.com/file/d/1Ze_S7R29mxHtdkJjMp8Z45E3Le5igi1n/view?usp=drivesdk
+-   **Presentation Deck**: https://drive.google.com/file/d/1_xZyDcBIa_Q9ubdAoNHvI5XapkV5oYWE/view?usp=sharing 
 
 ## 🧑‍💻 Installation & Setup
 
