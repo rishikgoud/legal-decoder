@@ -1,8 +1,7 @@
 
 'use client';
-import { Menu, Scale, User as UserIcon, LogOut } from 'lucide-react';
+import { Menu, Scale, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
-import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { Button } from './ui/button';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -12,6 +11,8 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { useRouter } from 'next/navigation';
+
 
 const loggedOutLinks = [
   { href: "/#features", label: "Features" },
@@ -20,16 +21,16 @@ const loggedOutLinks = [
 
 const loggedInLinks = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard", label: "Analyze" },
   { href: "/compare", label: "Compare" },
   { href: "/clause-explorer", label: "Clause Explorer" },
 ];
 
 export function Header() {
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
+
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -49,12 +50,15 @@ export function Header() {
     };
   }, []);
 
-  const closeSheet = () => setIsSheetOpen(false);
-
   const getInitials = (email: string | undefined) => {
       if (!email) return 'U';
       return email.charAt(0).toUpperCase();
   }
+  
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
 
   const navLinks = user ? loggedInLinks : loggedOutLinks;
 
@@ -78,7 +82,7 @@ export function Header() {
              <Link 
                 key={link.href + link.label} 
                 href={link.href} 
-                className={cn("text-gray-300 transition-colors hover:text-white", { "text-primary font-semibold": pathname === link.href && link.label !== 'Analyze' })}
+                className={cn("text-gray-300 transition-colors hover:text-white", { "text-primary font-semibold": pathname === link.href })}
              >
                {link.label}
              </Link>
@@ -122,44 +126,34 @@ export function Header() {
             )}
 
             {/* Mobile Navigation */}
-            <div className="md:hidden">
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+             <div className="md:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
                     <Menu className="h-6 w-6" />
                     <span className="sr-only">Open menu</span>
-                </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[280px] bg-background border-l border-white/20">
-                <div className="flex flex-col h-full">
-                    <div className="border-b border-white/10 p-4">
-                    <Link href="/" className="flex items-center gap-3" onClick={closeSheet}>
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
-                        <Scale className="h-6 w-6 text-white" />
-                        </div>
-                        <h1 className="text-xl font-bold tracking-tight font-heading">
-                        Legal Decoder
-                        </h1>
-                    </Link>
-                    </div>
-                    <nav className="flex flex-col gap-4 p-4 mt-4">
-                    {navLinks.map((link) => (
-                        <Link 
-                        key={link.href + link.label} 
-                        href={link.href} 
-                        className={cn("text-lg text-gray-300 transition-colors hover:text-primary p-2 rounded-md", {"text-primary font-semibold": pathname === link.href})}
-                        onClick={closeSheet}
-                        >
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[200px] bg-background border-white/20">
+                  {navLinks.map((link) => (
+                    <Link key={link.href + link.label} href={link.href}>
+                      <DropdownMenuItem className="cursor-pointer text-base">
                         {link.label}
-                        </Link>
+                      </DropdownMenuItem>
+                    </Link>
+                  ))}
+                  <DropdownMenuSeparator />
+                   {!isLoading && (user ? (
+                      <LogoutButton />
+                    ) : (
+                      <Link href="/login">
+                        <DropdownMenuItem className="cursor-pointer text-base">
+                          Login
+                        </DropdownMenuItem>
+                      </Link>
                     ))}
-                    </nav>
-                    <div className="mt-auto p-4 border-t border-white/10">
-                        {!isLoading && (user ? <LogoutButton /> : <Button asChild className="w-full"><Link href="/login">Login</Link></Button>)}
-                    </div>
-                </div>
-                </SheetContent>
-            </Sheet>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
         </div>
       </div>
