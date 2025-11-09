@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background-start-rgb: 11, 12, 16;
+    --background-end-rgb: 26, 26, 46;
+    --background: 224 71% 4%;
+    --foreground: 210 20% 98%;
+    --card: 224 71% 4%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 196 98% 55%; /* Bright Cyan/Blue */
+    --primary-foreground: 224 71% 4%;
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 28% 17%;
+    --muted-foreground: 218 11% 65%; /* Corresponds to #9CA3AF / text-[#CCCCCC] */
+    --accent: 271 76% 53%; /* Purple */
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 196 98% 55%;
+    --radius: 0.5rem;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    --risk-high: 0 72% 51%;
+    --risk-medium: 45 93% 47%;
+    --risk-low: 142 71% 45%;
+  }
+
+  .dark {
+    --background-start-rgb: 11, 12, 16;
+    --background-end-rgb: 26, 26, 46;
+    --background: 224 71% 4%;
+    --foreground: 210 20% 98%; /* Corresponds to #F5F5F5 */
+    --card: 224 71% 4%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 196 98% 55%;
+    --primary-foreground: 224 71% 4%;
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 28% 17%;
+    --muted-foreground: 218 11% 65%; /* Corresponds to #9CA3AF / text-[#CCCCCC] */
+    --accent: 271 76% 53%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 196 98% 55%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    --risk-high: 0 72% 51%;
+    --risk-medium: 45 93% 47%;
+    --risk-low: 142 71% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Use the specified text colors */
+  h1, h2, h3, h4, h5, h6 {
+    color: #EAEAEA;
+  }
+
+  p {
+    color: #CCCCCC;
+  }
+
+  .text-hero-h1 {
+     color: #F5F5F5;
+  }
+
+}
+
+@layer utilities {
+  .glow-border {
+    position: relative;
+    overflow: hidden;
+  }
+  .glow-border::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    padding: 1px; /* border thickness */
+    background: linear-gradient(120deg, hsl(var(--primary)), hsl(var(--accent)), #e100ff);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  .glow-border:hover::before {
+      opacity: 0.75;
+  }
+
+  .rgb-text-animation {
+    background-image: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)), #e100ff, hsl(var(--primary)));
+    background-size: 200% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: rgb-text-flow 4s linear infinite;
+  }
+
+  @keyframes rgb-text-flow {
+    to {
+      background-position: 200% center;
+    }
+  }
+
+  .glass-card {
+    background: rgba(26, 26, 46, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .bg-grid-white\/\[0\.05\] {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}

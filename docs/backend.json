@@ -1,0 +1,177 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the LegalEase application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the user."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName"
+      ]
+    },
+    "Contract": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Contract",
+      "type": "object",
+      "description": "Represents a contract uploaded and analyzed by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Contract entity."
+        },
+        "name": {
+            "type": "string",
+            "description": "The file name of the contract."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["Pending", "Analyzed", "Error"],
+            "description": "The analysis status of the contract."
+        },
+        "riskLevel": {
+            "type": "string",
+            "enum": ["High", "Medium", "Low", "N/A"],
+            "description": "The overall risk level of the contract."
+        },
+        "clauses": {
+            "type": "number",
+            "description": "The number of clauses in the contract."
+        },
+        "analyzedAt": {
+          "type": "string",
+          "description": "Date and time when the contract analysis was performed.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "status",
+        "riskLevel",
+        "clauses",
+        "analyzedAt"
+      ]
+    },
+    "Clause": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Clause",
+      "type": "object",
+      "description": "Represents a clause extracted from a contract.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Clause entity."
+        },
+        "contractId": {
+          "type": "string",
+          "description": "Reference to Contract. (Relationship: Contract 1:N Clause)"
+        },
+        "text": {
+          "type": "string",
+          "description": "Text content of the clause."
+        },
+        "clauseType": {
+          "type": "string",
+          "description": "Type or category of the clause (e.g., confidentiality, liability)."
+        },
+        "riskScore": {
+          "type": "string",
+          "description": "Risk score assigned to the clause (High, Medium, Low)."
+        },
+        "plainEnglishSummary": {
+          "type": "string",
+          "description": "Simplified explanation of the clause in plain English."
+        }
+      },
+      "required": [
+        "id",
+        "contractId",
+        "text",
+        "clauseType",
+        "riskScore",
+        "plainEnglishSummary"
+      ]
+    },
+    "AnalysisResult": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AnalysisResult",
+      "type": "object",
+      "description": "Represents the overall analysis result for a contract, providing insights and recommendations.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AnalysisResult entity."
+        },
+        "contractId": {
+          "type": "string",
+          "description": "Reference to Contract. (Relationship: Contract 1:1 AnalysisResult)"
+        },
+        "overallRiskLevel": {
+          "type": "string",
+          "description": "Overall risk level of the contract (High, Medium, Low)."
+        },
+        "keyFindings": {
+          "type": "string",
+          "description": "Summary of the key findings from the contract analysis."
+        },
+        "recommendations": {
+          "type": "string",
+          "description": "Recommended actions based on the contract analysis."
+        }
+      },
+      "required": [
+        "id",
+        "contractId",
+        "overallRiskLevel",
+        "keyFindings",
+        "recommendations"
+      ]
+    }
+  },
+  "auth": {
+    "providers": []
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/contracts/{contractId}",
+        "definition": {
+          "entityName": "Contract",
+          "schema": {
+            "$ref": "#/backend/entities/Contract"
+          },
+          "description": "Stores all contracts uploaded by users.",
+          "params": [
+            {
+              "name": "contractId",
+              "description": "Unique identifier for the contract."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "A top-level 'contracts' collection is simple and sufficient for this application's needs. We will secure it using Firestore security rules based on the 'userId' field in each contract document."
+  }
+}
