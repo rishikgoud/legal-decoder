@@ -46,7 +46,7 @@ The main idea behind Legal Decoder is to make legal transparency accessible to e
 
 ## 🚀 Product Demo
 
--   **Live Demo / Prototype**: [Insert your hosted app link here]
+-   **Live Demo / Prototype**: https://legal-decoder.vercel.app/
 -   **Demo Video**: [Insert video link — YouTube, Loom, or Google Drive]
 -   **Presentation Deck**: [Insert link to Google Slides or PDF presentation]
 
@@ -80,7 +80,7 @@ The main idea behind Legal Decoder is to make legal transparency accessible to e
     ```
 
 5.  **Access the App**
-    Open [http://localhost:9002](http://localhost:9002) to view it in your browser.
+    Open https://legal-decoder.vercel.app/ to view it in your browser.
 
 ## 📂 Folder Structure
 
