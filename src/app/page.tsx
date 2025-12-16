@@ -58,7 +58,7 @@ const howItWorksSteps = [
         description: 'The AI meticulously scans the text to identify and categorize every legal clause, from confidentiality to liability and termination.',
     },
     {
-        icon: <Scale className="h-8 w-8 text-accent" />,
+        icon: <Scale className="h-8 h-8 text-accent" />,
         title: '4. Risk Assessment',
         description: 'Each clause is assigned a risk score—High, Medium, or Low—based on its potential impact, with a clear explanation for the rating.',
     },
