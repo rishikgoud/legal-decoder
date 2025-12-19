@@ -12,7 +12,7 @@ const VantaBackground = () => {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    if (!vantaEffect && !isMobile) {
+    if (!vantaEffect && vantaRef.current && !isMobile) {
       setVantaEffect(
         GLOBE({
           el: vantaRef.current,
@@ -44,5 +44,3 @@ const VantaBackground = () => {
 };
 
 export default VantaBackground;
-
-    
