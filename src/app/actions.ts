@@ -72,25 +72,3 @@ export async function compareTwoContracts(
     };
   }
 }
-
-export async function deleteContractAnalysis(analysisId: string, userId: string) {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/delete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ analysisId, userId }),
-    });
-
-    if (!response.ok) {
-      const { error } = await response.json();
-      throw new Error(error || 'Failed to delete analysis.');
-    }
-
-    return { success: true, error: null };
-  } catch (error: any) {
-    console.error('Error deleting contract analysis:', error);
-    return { success: false, error: error.message };
-  }
-}

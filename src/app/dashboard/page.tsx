@@ -17,7 +17,6 @@ import type {Contract} from '@/lib/types';
 import {supabase} from '@/lib/supabaseClient';
 import AuthGuard from '@/components/AuthGuard';
 import {User} from '@supabase/supabase-js';
-import { deleteContractAnalysis } from '@/app/actions';
 
 function DashboardPageComponent() {
   const [analysisResult, setAnalysisResult] =
@@ -200,18 +199,24 @@ function DashboardPageComponent() {
         });
         return;
     }
-    const response = await deleteContractAnalysis(contractId, user.id);
-    if (response.success) {
+    const response = await fetch('/api/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ analysisId: contractId, userId: user.id }),
+    });
+
+    if (response.ok) {
       toast({
         title: 'Contract Deleted',
         description: 'The analysis has been removed from your history.',
       });
-      if (user) fetchContracts(user.id);
+      setContracts(prev => prev.filter(c => c.id !== contractId));
     } else {
+      const { error } = await response.json();
       toast({
         variant: 'destructive',
         title: 'Delete Failed',
-        description: response.error || 'Could not delete the contract analysis.',
+        description: error || 'Could not delete the contract analysis.',
       });
     }
   };
