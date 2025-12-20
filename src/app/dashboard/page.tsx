@@ -274,7 +274,7 @@ function DashboardPageComponent() {
             isLoading={isLoadingContracts}
             onViewDetails={handleViewDetails}
             onDelete={handleDelete}
-            onDownloadReport={onDownloadReport}
+            onDownloadReport={handleDownloadReport}
           />
         );
     }
