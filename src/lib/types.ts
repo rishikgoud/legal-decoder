@@ -11,3 +11,15 @@ export type Contract = {
   highRiskClauses?: number;
   analysis_data?: DetectAndLabelClausesOutput | { error: string };
 };
+
+export type NegotiationAction = {
+  id: string;
+  contract_id: string;
+  user_id: string;
+  recipient_email?: string;
+  status: 'drafted' | 'sent' | 'failed' | 'completed' | 'running';
+  executed_at: string;
+  supervity_run_id?: string;
+};
+
+    

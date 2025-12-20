@@ -10,12 +10,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, FileText, Download, Eye, Trash2, Calendar } from 'lucide-react';
+import { MoreHorizontal, FileText, Download, Eye, Trash2, Calendar, Bot } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Contract } from '@/lib/types';
@@ -26,6 +27,7 @@ type ContractCardProps = {
   onViewDetails: () => void;
   onDownloadReport: () => void;
   onDelete: () => void;
+  onStartNegotiation?: () => void;
 };
 
 const riskLevelToVariant = (
@@ -59,7 +61,11 @@ export default function ContractCard({
   onViewDetails,
   onDownloadReport,
   onDelete,
+  onStartNegotiation,
 }: ContractCardProps) {
+
+  const canStartNegotiation = (contract.riskLevel === 'Medium' || contract.riskLevel === 'High') && contract.status === 'Analyzed';
+
   return (
     <Card className="bg-white shadow-md hover:shadow-lg transition-shadow flex flex-col">
       <CardHeader className="flex-row items-start justify-between gap-4 pb-2">
@@ -82,6 +88,15 @@ export default function ContractCard({
                 <DropdownMenuItem onClick={onDownloadReport} className="cursor-pointer">
                     <Download className="mr-2 h-4 w-4" /> Download
                 </DropdownMenuItem>
+                {onStartNegotiation && canStartNegotiation && (
+                    <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={onStartNegotiation} className="cursor-pointer text-accent focus:text-accent focus:bg-accent/10">
+                            <Bot className="mr-2 h-4 w-4" /> Start Negotiation
+                        </DropdownMenuItem>
+                    </>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onDelete} className="text-red-500 focus:text-red-500 cursor-pointer">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete
                 </DropdownMenuItem>
@@ -106,3 +121,5 @@ export default function ContractCard({
     </Card>
   );
 }
+
+    

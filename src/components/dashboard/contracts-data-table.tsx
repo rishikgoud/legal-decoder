@@ -8,6 +8,7 @@ import {
   ShieldAlert,
   Frown,
   Loader2,
+  Bot,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -104,6 +105,7 @@ export default function ContractsDataTable({
             onViewDetails={() => onViewDetails(contract)}
             onDownloadReport={() => onDownloadReport(contract)}
             onDelete={() => handleDeleteClick(contract)}
+            onStartNegotiation={onStartNegotiation ? () => onStartNegotiation(contract) : undefined}
           />
         ))}
       </div>
@@ -133,3 +135,5 @@ export default function ContractsDataTable({
     </>
   );
 }
+
+    
