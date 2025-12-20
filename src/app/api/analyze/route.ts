@@ -32,7 +32,6 @@ export async function POST(req: Request) {
         user_id: userId,
         file_name: fileName,
         status: 'Analyzing',
-        risk_level: 'N/A',
         clauses_count: 0,
         high_risk_clauses_count: 0,
       },
