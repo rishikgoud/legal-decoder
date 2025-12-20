@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { DetectAndLabelClausesOutput } from '@/ai/schemas/detect-and-label-clauses-schema';
 import { Button } from '@/components/ui/button';
-import { Loader2, UploadCloud } from 'lucide-react';
+import { Loader2, UploadCloud, Bot } from 'lucide-react';
 import { Header } from '@/components/header';
 import AuthGuard from '@/components/AuthGuard';
 import { User } from '@supabase/supabase-js';
@@ -14,6 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/lib/supabaseClient';
 import AnalysisReport from '@/components/analysis-report';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import Chat from '@/components/chat';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
@@ -110,12 +112,27 @@ function AnalyzePageComponent() {
                 </div>
             </div>
         ) : analysisResult ? (
-            <AnalysisReport 
-                analysisResult={analysisResult} 
-                contractName={contractFileName} 
-                onStartNew={handleStartNewAnalysis}
-                analysisId={analysisId}
-            />
+            <div className="relative">
+                <AnalysisReport 
+                    analysisResult={analysisResult} 
+                    contractName={contractFileName} 
+                    onStartNew={handleStartNewAnalysis}
+                    analysisId={analysisId}
+                />
+                <Dialog>
+                  <DialogTrigger asChild>
+                      <Button className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl" size="icon">
+                          <Bot className="h-8 w-8" />
+                      </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl h-[70vh] flex flex-col p-0">
+                      <DialogHeader className='p-6 pb-2'>
+                          <DialogTitle>Ask AI about this Contract</DialogTitle>
+                      </DialogHeader>
+                      <Chat contractText={contractText} />
+                  </DialogContent>
+                </Dialog>
+            </div>
         ) : (
           <UploadSection onAnalyze={handleAnalyze} />
         )}

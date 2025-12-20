@@ -321,19 +321,6 @@ function DashboardPageComponent() {
               analysisResult={analysisResult}
               contractText={contractText}
             />
-             <Dialog>
-              <DialogTrigger asChild>
-                  <Button className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl" size="icon">
-                      <Bot className="h-8 w-8" />
-                  </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl h-[70vh] flex flex-col p-0">
-                  <DialogHeader className='p-6 pb-2'>
-                      <DialogTitle>Ask AI about this Contract</DialogTitle>
-                  </DialogHeader>
-                  <Chat contractText={contractText} />
-              </DialogContent>
-            </Dialog>
           </div>
         ) : (
           <div className="container mx-auto max-w-4xl py-12 px-6 sm:px-8 md:px-4 flex items-center justify-center h-full">
