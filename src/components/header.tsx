@@ -1,4 +1,3 @@
-
 'use client';
 import { Menu, Scale, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -21,6 +20,7 @@ const loggedOutLinks = [
 
 const loggedInLinks = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard", label: "Analyze Contract" },
   { href: "/compare", label: "Compare" },
   { href: "/clause-explorer", label: "Clause Explorer" },
 ];
@@ -67,7 +67,7 @@ export function Header() {
   return (
     <header className={cn(
         "sticky top-0 z-50 w-full border-b",
-        isLight ? "bg-white/80 border-slate-200" : "border-white/10 bg-background/80",
+        "border-white/10 bg-background/80",
         "backdrop-blur-lg"
     )}>
       <div className="container flex h-16 max-w-7xl items-center justify-between px-6 sm:px-8 md:px-4">
@@ -75,13 +75,13 @@ export function Header() {
           <Link href="/" className="flex items-center gap-3">
             <div className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-lg",
-                isLight ? "bg-slate-800" : "bg-white/10"
+                "bg-white/10"
             )}>
               <Scale className="h-5 w-5 text-white" />
             </div>
             <h1 className={cn(
                 "text-xl sm:text-2xl font-bold tracking-tight font-heading",
-                isLight ? "text-slate-900" : "text-white"
+                "text-white"
             )}>
               Legal Decoder
             </h1>
@@ -95,9 +95,9 @@ export function Header() {
                 key={link.href + link.label} 
                 href={link.href} 
                 className={cn(
-                    isLight ? "text-slate-600 hover:text-slate-900" : "text-gray-300 hover:text-white",
+                    "text-gray-300 hover:text-white",
                     "transition-colors",
-                    { "text-primary font-semibold": pathname === link.href }
+                    { "text-primary font-semibold": pathname === link.href && link.label !== 'Analyze Contract' } // Avoid highlighting both dashboard and analyze
                 )}
              >
                {link.label}
@@ -146,7 +146,7 @@ export function Header() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <Menu className={cn("h-6 w-6", isLight ? "text-slate-900" : "text-white")} />
+                    <Menu className={cn("h-6 w-6", "text-white")} />
                     <span className="sr-only">Open menu</span>
                   </Button>
                 </DropdownMenuTrigger>
