@@ -112,7 +112,7 @@ export default function LandingPage() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && document.querySelector('.rellax')) {
       new Rellax('.rellax', {
         speed: -2,
         center: false,
