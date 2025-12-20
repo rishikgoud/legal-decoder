@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { getOverallRisk } from "@/lib/utils";
 import type { DetectAndLabelClausesOutput } from "@/ai/schemas/detect-and-label-clauses-schema";
+import PrintButton from "@/components/PrintButton";
 
 const riskLevelToVariant = (
   level: 'High' | 'Medium' | 'Low'
@@ -143,9 +144,7 @@ export default async function ReportPage({ params }: { params: { id: string } })
 
       <body>
         <div className="report-container">
-            <button className="print-button" onClick={() => window.print()}>
-              Print / Save as PDF
-            </button>
+            <PrintButton />
 
             <header>
                 <h1>Contract Analysis Report</h1>
