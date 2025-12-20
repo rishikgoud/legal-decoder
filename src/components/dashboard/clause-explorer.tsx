@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useTransition } from 'react';
@@ -44,6 +45,7 @@ type Clause = {
   implicationsAndRisks: string;
   riskLevel: 'Low' | 'Medium' | 'High';
   whyItMatters: { title: string; text: string; icon: React.ReactNode }[];
+  relatedClauses?: string[];
 };
 
 const commonClauses: Clause[] = [
@@ -69,7 +71,8 @@ const commonClauses: Clause[] = [
         text: 'Indemnity claims often fall outside "Limitation of Liability" caps, meaning financial exposure can be unlimited.',
         icon: <AlertTriangle className="h-5 w-5 text-yellow-500" />,
       },
-    ]
+    ],
+    relatedClauses: ['Limitation of Liability'],
   },
   {
     icon: <Scale className="h-5 w-5" />,
@@ -93,7 +96,8 @@ const commonClauses: Clause[] = [
         text: 'Pay attention to what is excluded, such as lost profits. This can be more significant than the direct liability cap.',
         icon: <AlertTriangle className="h-5 w-5 text-yellow-500" />,
       },
-    ]
+    ],
+    relatedClauses: ['Indemnification'],
   },
   {
     icon: <FileX className="h-5 w-5" />,
@@ -117,7 +121,8 @@ const commonClauses: Clause[] = [
         text: 'A short cure period (e.g., 5 days) means you have very little time to fix a mistake before the other party can terminate.',
         icon: <AlertTriangle className="h-5 w-5 text-yellow-500" />,
       },
-    ]
+    ],
+    relatedClauses: [],
   },
   {
     icon: <Globe className="h-5 w-5" />,
@@ -141,7 +146,8 @@ const commonClauses: Clause[] = [
         text: 'If the jurisdiction is across the country, you may need to hire local lawyers and travel, dramatically increasing costs.',
         icon: <AlertTriangle className="h-5 w-5 text-yellow-500" />,
       },
-    ]
+    ],
+    relatedClauses: [],
   },
   {
     icon: <Swords className="h-5 w-5" />,
@@ -160,7 +166,8 @@ const commonClauses: Clause[] = [
         text: 'This clause protects you from being in breach of contract due to catastrophic events you cannot control.',
         icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
       },
-    ]
+    ],
+    relatedClauses: [],
   },
   {
     icon: <Copyright className="h-5 w-5" />,
@@ -184,11 +191,12 @@ const commonClauses: Clause[] = [
         text: 'The other party will usually retain ownership of their pre-existing tools and IP. Ensure you have a perpetual license to use anything that is part of the final deliverable.',
         icon: <AlertTriangle className="h-5 w-5 text-yellow-500" />,
       },
-    ]
+    ],
+    relatedClauses: [],
   },
 ];
 
-type ClauseDetail = Clause | { title: string; alias?: string; simpleExplanation: string; standardWording: string; implicationsAndRisks: string; riskLevel: 'Low' | 'Medium' | 'High'; icon: React.ReactNode; whyItMatters: { title: string; text: string; icon: React.ReactNode }[] };
+type ClauseDetail = Clause | { title: string; alias?: string; simpleExplanation: string; standardWording: string; implicationsAndRisks: string; riskLevel: 'Low' | 'Medium' | 'High'; icon: React.ReactNode; whyItMatters: { title: string; text: string; icon: React.ReactNode }[]; relatedClauses?: string[] };
 
 const ClauseExplorer = () => {
   const [selectedClause, setSelectedClause] = useState<ClauseDetail>(
@@ -213,7 +221,8 @@ const ClauseExplorer = () => {
               title: "Key Implications",
               text: result.implicationsAndRisks,
               icon: <AlertTriangle className="h-5 w-5 text-yellow-500"/>
-          }]
+          }],
+          relatedClauses: [] // AI response doesn't include this yet
         });
       } catch (error) {
         console.error('Failed to define legal term:', error);
@@ -224,6 +233,28 @@ const ClauseExplorer = () => {
             'Could not retrieve a definition for that term. Please try again.',
         });
       }
+    });
+  };
+
+  const handleRelatedClauseClick = (title: string) => {
+    const clause = commonClauses.find(c => c.title === title);
+    if (clause) {
+      setSelectedClause(clause);
+    }
+  }
+
+  const handleCopy = (text: string, type: 'clause' | 'explanation') => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: 'Copied to Clipboard',
+        description: `The ${type} has been copied.`,
+      })
+    }).catch(err => {
+      toast({
+        variant: 'destructive',
+        title: 'Copy Failed',
+        description: 'Could not copy the text.',
+      })
     });
   };
 
@@ -305,8 +336,8 @@ const ClauseExplorer = () => {
                 {selectedClause.alias && <p className="mt-2 text-md text-muted-foreground">Also known as: {selectedClause.alias}</p>}
               </div>
                <div className="flex items-center gap-2 mt-4 sm:mt-0">
-                  <Button variant="outline" size="sm"><Share2 className="mr-2 h-4 w-4"/>Share</Button>
-                  <Button size="sm"><Copy className="mr-2 h-4 w-4"/>Copy Clause</Button>
+                  <Button variant="outline" size="sm" onClick={() => handleCopy(selectedClause.simpleExplanation, 'explanation')}><Share2 className="mr-2 h-4 w-4"/>Share</Button>
+                  <Button size="sm" onClick={() => handleCopy(selectedClause.standardWording, 'clause')}><Copy className="mr-2 h-4 w-4"/>Copy Clause</Button>
               </div>
             </div>
 
@@ -386,15 +417,20 @@ const ClauseExplorer = () => {
                     </Card>
                     
                     {/* Related Clauses */}
-                    <Card className="glass-card">
-                        <CardHeader>
-                            <CardTitle className="text-md">Related Clauses</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            <Button variant="ghost" className="w-full justify-between">Limitation of Liability →</Button>
-                             <Button variant="ghost" className="w-full justify-between">Warranties →</Button>
-                        </CardContent>
-                    </Card>
+                    {(selectedClause.relatedClauses && selectedClause.relatedClauses.length > 0) && (
+                        <Card className="glass-card">
+                            <CardHeader>
+                                <CardTitle className="text-md">Related Clauses</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                {selectedClause.relatedClauses.map(title => (
+                                     <Button key={title} variant="ghost" className="w-full justify-between" onClick={() => handleRelatedClauseClick(title)}>
+                                        {title} →
+                                    </Button>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
           </div>
