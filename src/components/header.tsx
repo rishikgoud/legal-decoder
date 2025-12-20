@@ -1,3 +1,4 @@
+
 'use client';
 import { Menu, Scale, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
