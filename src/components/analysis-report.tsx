@@ -1,3 +1,4 @@
+
 'use client';
 
 import { DetectAndLabelClausesOutput } from '@/ai/schemas/detect-and-label-clauses-schema';
@@ -13,6 +14,9 @@ import {
   Share2,
   Download,
   RotateCcw,
+  MessageCircle,
+  Mail,
+  Link2,
 } from 'lucide-react';
 import {
   Accordion,
@@ -20,11 +24,20 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
+
 
 type AnalysisReportProps = {
   analysisResult: DetectAndLabelClausesOutput;
   contractName: string;
   onStartNew: () => void;
+  analysisId: string | null;
 };
 
 const riskLevelToVariant = (
@@ -37,7 +50,9 @@ export default function AnalysisReport({
   analysisResult,
   contractName,
   onStartNew,
+  analysisId,
 }: AnalysisReportProps) {
+  const { toast } = useToast();
   const { summaryCards, overallRisk, riskScore } = useMemo(() => {
     const highRiskCount = analysisResult.filter(
       (c) => c.riskLevel === 'High'
@@ -97,6 +112,50 @@ export default function AnalysisReport({
     return 'text-green-400';
   };
 
+  const handleExport = () => {
+    if (analysisId) {
+      window.open(`/report/${analysisId}`, '_blank');
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Export Failed',
+        description: 'Could not generate report link, analysis ID is missing.',
+      });
+    }
+  };
+  
+  const getShareLink = () => `${window.location.origin}/report/${analysisId}`;
+
+  const handleShare = (platform: 'email' | 'whatsapp' | 'copy') => {
+    if (!analysisId) {
+       toast({
+        variant: 'destructive',
+        title: 'Sharing Failed',
+        description: 'Cannot generate a shareable link, analysis ID is missing.',
+      });
+      return;
+    }
+    const link = getShareLink();
+    const shareText = `Check out this contract analysis for "${contractName}": ${link}`;
+
+    switch (platform) {
+      case 'email':
+        window.location.href = `mailto:?subject=Contract Analysis: ${contractName}&body=${shareText}`;
+        break;
+      case 'whatsapp':
+        window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(link).then(() => {
+          toast({ title: 'Link Copied', description: 'Shareable link copied to clipboard.' });
+        }, () => {
+          toast({ variant: 'destructive', title: 'Copy Failed', description: 'Could not copy link to clipboard.' });
+        });
+        break;
+    }
+  };
+
+
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
       {/* Header */}
@@ -114,8 +173,17 @@ export default function AnalysisReport({
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={onStartNew}><RotateCcw className="mr-2 h-4 w-4" /> New Analysis</Button>
-          <Button variant="outline"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
-          <Button className="bg-primary hover:bg-primary/90"><Download className="mr-2 h-4 w-4" /> Export Report</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleShare('email')}><Mail className="mr-2 h-4 w-4"/> Email</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('whatsapp')}><MessageCircle className="mr-2 h-4 w-4"/> WhatsApp</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleShare('copy')}><Link2 className="mr-2 h-4 w-4"/> Copy Link</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button className="bg-primary hover:bg-primary/90" onClick={handleExport}><Download className="mr-2 h-4 w-4" /> Export Report</Button>
         </div>
       </div>
 

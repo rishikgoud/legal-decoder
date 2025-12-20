@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -19,6 +20,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 function AnalyzePageComponent() {
   const [analysisResult, setAnalysisResult] =
     useState<DetectAndLabelClausesOutput | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [contractText, setContractText] = useState('');
@@ -40,6 +42,7 @@ function AnalyzePageComponent() {
 
     setIsLoading(true);
     setAnalysisResult(null);
+    setAnalysisId(null);
 
     try {
       const response = await fetch('/api/analyze', {
@@ -62,6 +65,7 @@ function AnalyzePageComponent() {
 
       if (result.data?.analysis_data) {
         setAnalysisResult(result.data.analysis_data as DetectAndLabelClausesOutput);
+        setAnalysisId(result.data.id); // Save the analysis ID
         toast({
             title: "Analysis Complete",
             description: "Your contract report is ready below."
@@ -74,6 +78,7 @@ function AnalyzePageComponent() {
         description: error.message || 'An unknown error occurred.',
       });
       setAnalysisResult(null);
+      setAnalysisId(null);
     } finally {
       setIsLoading(false);
     }
@@ -81,9 +86,14 @@ function AnalyzePageComponent() {
 
   const handleStartNewAnalysis = () => {
     setAnalysisResult(null);
+    setAnalysisId(null);
     setContractText('');
     setContractFileName('New Contract');
     setIsLoading(false);
+     toast({
+        title: "Ready for New Analysis",
+        description: "The previous report is saved in your dashboard history.",
+    });
   }
 
   return (
@@ -104,6 +114,7 @@ function AnalyzePageComponent() {
                 analysisResult={analysisResult} 
                 contractName={contractFileName} 
                 onStartNew={handleStartNewAnalysis}
+                analysisId={analysisId}
             />
         ) : (
           <UploadSection onAnalyze={handleAnalyze} />
