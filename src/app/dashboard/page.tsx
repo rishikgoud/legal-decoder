@@ -1,7 +1,6 @@
 'use client';
 
 import {useState, useMemo, useEffect} from 'react';
-import {analyzeContract} from '@/app/actions';
 import {useToast} from '@/hooks/use-toast';
 import UploadForm from '@/components/upload-form';
 import Dashboard from '@/components/dashboard';
@@ -105,50 +104,60 @@ function DashboardPageComponent() {
   };
 
   const handleAnalyze = async () => {
-    if (!contractText) return;
-    
+    if (!contractText || !user) return;
+
     setIsLoading(true);
-    setCurrentView('analysis'); // Move to analysis view to show loader
+    setCurrentView('analysis');
 
-    // The server action now creates a record immediately, so we don't need to add a placeholder.
-    // Instead, we will refetch the list upon completion.
-    const result = await analyzeContract(contractText, contractFileName);
-    
-    // Refetch contracts to get the new record and its final status
-    if (user) {
-      const { data, error: fetchError } = await supabase
-        .from('contract_analyses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('analyzed_at', { ascending: false });
-      
-      if (fetchError) {
-        console.error('Error refetching contracts:', fetchError);
-      } else {
-          const formattedData = data.map(
-            (item: any): Contract => ({
-              id: item.id,
-              name: item.file_name,
-              status: item.status,
-              riskLevel: item.risk_level,
-              clauses: item.clauses_count,
-              analyzedAt: item.analyzed_at,
-              highRiskClauses: item.high_risk_clauses_count,
-              analysis_data: item.analysis_data,
-            })
-          );
-          setContracts(formattedData);
-      }
-    }
+    try {
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ contractText, fileName: contractFileName }),
+        });
 
+        const result = await response.json();
 
-    if (result.success && result.data?.analysis_data) {
-        setAnalysisResult(result.data.analysis_data as DetectAndLabelClausesOutput);
-    } else {
+        // Refetch contracts to get the new record and its final status
+        const { data: updatedContracts, error: fetchError } = await supabase
+            .from('contract_analyses')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('analyzed_at', { ascending: false });
+
+        if (fetchError) {
+            console.error('Error refetching contracts:', fetchError);
+        } else {
+            const formattedData = updatedContracts.map(
+                (item: any): Contract => ({
+                  id: item.id,
+                  name: item.file_name,
+                  status: item.status,
+                  riskLevel: item.risk_level,
+                  clauses: item.clauses_count,
+                  analyzedAt: item.analyzed_at,
+                  highRiskClauses: item.high_risk_clauses_count,
+                  analysis_data: item.analysis_data,
+                })
+            );
+            setContracts(formattedData);
+        }
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Analysis failed');
+        }
+
+        if (result.data?.analysis_data) {
+            setAnalysisResult(result.data.analysis_data as DetectAndLabelClausesOutput);
+        }
+
+    } catch (error: any) {
         toast({
             variant: 'destructive',
             title: 'Analysis Failed',
-            description: result.error || "An unknown error occurred.",
+            description: error.message || "An unknown error occurred.",
         });
         setAnalysisResult(null);
         setCurrentView('dashboard'); // Go back to dashboard on failure
