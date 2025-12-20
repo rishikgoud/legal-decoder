@@ -27,6 +27,9 @@ import {
   Share2,
   Copy,
   CheckCircle2,
+  Mail,
+  MessageCircle,
+  Link2,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
@@ -35,6 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../ui/dropdown-menu';
 
 type Clause = {
   icon: React.ReactNode;
@@ -258,6 +262,24 @@ const ClauseExplorer = () => {
     });
   };
 
+  const handleShare = (platform: 'email' | 'copy') => {
+    const shareText = `Clause: ${selectedClause.title}\n\nSimple Explanation:\n${selectedClause.simpleExplanation}`;
+
+    switch (platform) {
+      case 'email':
+        window.location.href = `mailto:?subject=Legal Decoder: Understanding "${selectedClause.title}"&body=${encodeURIComponent(shareText)}`;
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(shareText).then(() => {
+          toast({ title: 'Share Text Copied', description: 'Clause details copied to clipboard.' });
+        }, () => {
+          toast({ variant: 'destructive', title: 'Copy Failed', description: 'Could not copy the text.' });
+        });
+        break;
+    }
+  };
+
+
   const riskLevelToVariant = (
     level: 'High' | 'Medium' | 'Low'
   ): 'high' | 'medium' | 'low' => {
@@ -336,7 +358,15 @@ const ClauseExplorer = () => {
                 {selectedClause.alias && <p className="mt-2 text-md text-muted-foreground">Also known as: {selectedClause.alias}</p>}
               </div>
                <div className="flex items-center gap-2 mt-4 sm:mt-0">
-                  <Button variant="outline" size="sm" onClick={() => handleCopy(selectedClause.simpleExplanation, 'explanation')}><Share2 className="mr-2 h-4 w-4"/>Share</Button>
+                  <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm"><Share2 className="mr-2 h-4 w-4"/>Share</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                          <DropdownMenuItem onSelect={() => handleShare('email')}><Mail className="mr-2 h-4 w-4" /> Email</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleShare('copy')}><Copy className="mr-2 h-4 w-4" /> Copy Share Text</DropdownMenuItem>
+                      </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button size="sm" onClick={() => handleCopy(selectedClause.standardWording, 'clause')}><Copy className="mr-2 h-4 w-4"/>Copy Clause</Button>
               </div>
             </div>
