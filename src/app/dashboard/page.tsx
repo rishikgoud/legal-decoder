@@ -18,7 +18,6 @@ import {supabase} from '@/lib/supabaseClient';
 import AuthGuard from '@/components/AuthGuard';
 import {User} from '@supabase/supabase-js';
 import { deleteContractAnalysis } from '@/app/actions';
-import AnalysisReport from '@/components/analysis-report';
 
 function DashboardPageComponent() {
   const [analysisResult, setAnalysisResult] =
@@ -26,7 +25,7 @@ function DashboardPageComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const {toast} = useToast();
   const [currentView, setCurrentView] = useState<
-    'dashboard' | 'uploader' | 'preview' | 'analysis' | 'report'
+    'dashboard' | 'uploader' | 'preview' | 'analysis'
   >('dashboard');
   const [contractText, setContractText] = useState('');
   const [contractFileName, setContractFileName] = useState('');
@@ -193,7 +192,15 @@ function DashboardPageComponent() {
   };
 
   const handleDelete = async (contractId: string) => {
-    const response = await deleteContractAnalysis(contractId);
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Authentication Error',
+            description: 'You must be logged in to delete a contract.',
+        });
+        return;
+    }
+    const response = await deleteContractAnalysis(contractId, user.id);
     if (response.success) {
       toast({
         title: 'Contract Deleted',
@@ -211,8 +218,7 @@ function DashboardPageComponent() {
   
   const handleDownloadReport = (contract: Contract) => {
     if (contract.status === 'Analyzed' && contract.analysis_data && !('error' in contract.analysis_data)) {
-      setSelectedContract(contract);
-      setCurrentView('report');
+      window.open(`/report/${contract.id}`, '_blank');
     } else {
       toast({
           variant: 'default',
@@ -225,18 +231,6 @@ function DashboardPageComponent() {
 
   const renderContent = () => {
     switch (currentView) {
-      case 'report':
-        return selectedContract ? (
-           <div>
-            <div className="container mx-auto max-w-7xl px-4 sm:px-6 md:px-8 mb-8">
-              <Button onClick={handleReset} variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
-              </Button>
-            </div>
-            <AnalysisReport contract={selectedContract} />
-          </div>
-        ) : null;
       case 'analysis':
         return analysisResult ? (
           <div>
@@ -280,7 +274,7 @@ function DashboardPageComponent() {
             isLoading={isLoadingContracts}
             onViewDetails={handleViewDetails}
             onDelete={handleDelete}
-            onDownloadReport={handleDownloadReport}
+            onDownloadReport={onDownloadReport}
           />
         );
     }

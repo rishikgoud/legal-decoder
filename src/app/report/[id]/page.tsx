@@ -1,0 +1,202 @@
+
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { notFound } from "next/navigation";
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { getOverallRisk } from "@/lib/utils";
+import type { DetectAndLabelClausesOutput } from "@/ai/schemas/detect-and-label-clauses-schema";
+
+const riskLevelToVariant = (
+  level: 'High' | 'Medium' | 'Low'
+): 'high' | 'medium' | 'low' => {
+  return level.toLowerCase() as 'high' | 'medium' | 'low';
+};
+
+
+export default async function ReportPage({ params }: { params: { id: string } }) {
+  const { id } = params;
+
+  const { data, error } = await supabaseAdmin
+    .from("contract_analyses")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
+    return notFound();
+  }
+  
+  const analysisData = data.analysis_data as DetectAndLabelClausesOutput | undefined;
+  
+  const overallRisk = getOverallRisk(analysisData || []);
+
+  const riskColor =
+    overallRisk === "High"
+      ? "#ef4444" // red-500
+      : overallRisk === "Medium"
+      ? "#f59e0b" // amber-500
+      : "#22c55e"; // green-500
+
+  return (
+    <html>
+      <head>
+        <title>Contract Analysis Report</title>
+        <style>{`
+          body {
+            background: white;
+            color: black;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            padding: 2rem;
+            line-height: 1.6;
+          }
+          .report-container {
+            max-width: 800px;
+            margin: auto;
+          }
+          h1, h2, h3 {
+            color: #111827;
+          }
+          h1 { 
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem; 
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+          }
+          h2 {
+             font-size: 1.5rem;
+             margin-top: 2rem;
+             border-bottom: 1px solid #e5e7eb;
+             padding-bottom: 0.25rem;
+          }
+           h3 {
+             font-size: 1.25rem;
+             margin-top: 1.5rem;
+             font-weight: 600;
+          }
+          .risk-badge {
+            display: inline-block;
+            padding: 0.25em 0.6em;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 9999px;
+            color: white;
+          }
+          .risk-high { background-color: #ef4444; }
+          .risk-medium { background-color: #f59e0b; }
+          .risk-low { background-color: #22c55e; }
+
+          .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+          }
+          .summary-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            text-align: center;
+          }
+          .summary-card-title {
+            color: #6b7280;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
+           .summary-card-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #111827;
+          }
+          .clause-card {
+             page-break-inside: avoid;
+             border: 1px solid #e5e7eb;
+             border-radius: 0.5rem;
+             padding: 1.5rem;
+             margin-top: 1rem;
+          }
+           .clause-header {
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             margin-bottom: 1rem;
+           }
+          .print-button {
+             position: fixed;
+             bottom: 2rem;
+             right: 2rem;
+             padding: 0.75rem 1.5rem;
+             background-color: #2563eb;
+             color: white;
+             border: none;
+             border-radius: 0.5rem;
+             font-size: 1rem;
+             cursor: pointer;
+             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          }
+          @media print {
+            .print-button { display: none; }
+            body { padding: 0; }
+          }
+        `}</style>
+      </head>
+
+      <body>
+        <div className="report-container">
+            <button className="print-button" onClick={() => window.print()}>
+              Print / Save as PDF
+            </button>
+
+            <header>
+                <h1>Contract Analysis Report</h1>
+                <p><strong>File:</strong> {data.file_name}</p>
+                <p><strong>Analyzed On:</strong> {format(new Date(data.analyzed_at), 'MMMM dd, yyyy')}</p>
+            </header>
+
+            <div className="summary-grid">
+              <div className="summary-card">
+                  <p className="summary-card-title">Overall Risk</p>
+                  <p className="summary-card-value" style={{ color: riskColor }}>{overallRisk}</p>
+              </div>
+              <div className="summary-card">
+                  <p className="summary-card-title">Total Clauses</p>
+                  <p className="summary-card-value">{data.clauses_count}</p>
+              </div>
+               <div className="summary-card">
+                  <p className="summary-card-title">High-Risk Clauses</p>
+                  <p className="summary-card-value" style={{ color: '#ef4444' }}>{data.high_risk_clauses_count}</p>
+              </div>
+            </div>
+
+            <section>
+                <h2>Clause-by-Clause Breakdown</h2>
+                {analysisData && analysisData.map((clause, index) => (
+                    <div key={index} className="clause-card">
+                        <div className="clause-header">
+                            <h3>{clause.clauseType}</h3>
+                            <span className={`risk-badge risk-${clause.riskLevel.toLowerCase()}`}>
+                                {clause.riskLevel} Risk
+                            </span>
+                        </div>
+                        <div>
+                            <h4>Plain English Summary</h4>
+                            <p>{clause.summary}</p>
+                        </div>
+                        <div style={{marginTop: '1rem'}}>
+                            <h4>Risk Analysis</h4>
+                            <p>{clause.riskReason}</p>
+                        </div>
+                        {(clause.riskLevel === 'High' || clause.riskLevel === 'Medium') && clause.recommendation && (
+                            <div style={{marginTop: '1rem'}}>
+                                <h4>Recommendation</h4>
+                                <p>{clause.recommendation}</p>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </section>
+        </div>
+      </body>
+    </html>
+  );
+}
