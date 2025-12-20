@@ -51,10 +51,14 @@ function DashboardPageComponent() {
 
       if (error) {
         console.error('Error fetching contracts:', error);
+        // Handle RLS policy errors which can return an empty error object
+        const isRLSError = error && Object.keys(error).length === 0;
         toast({
           variant: 'destructive',
-          title: 'Error Fetching History',
-          description: 'Could not load your contract analysis history.',
+          title: isRLSError ? 'Database Access Error' : 'Error Fetching History',
+          description: isRLSError 
+            ? 'Could not fetch history. Please ensure Row Level Security is enabled on your "contracts" table and a policy exists to allow users to read their own records.'
+            : 'Could not load your contract analysis history.',
         });
         setContracts([]);
       } else {
