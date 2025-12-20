@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -11,7 +12,6 @@ import { DetectAndLabelClausesOutput } from '@/ai/schemas/detect-and-label-claus
 import { Button } from '@/components/ui/button';
 import { FilePlus2, Loader2, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import ContractsDataTable from '@/components/dashboard/contracts-data-table';
 import { Header } from '@/components/header';
 import type { Contract } from '@/lib/types';
@@ -44,10 +44,10 @@ function DashboardPageComponent() {
 
       setIsLoadingContracts(true);
       const { data, error } = await supabase
-        .from('contract_analyses')
-        .select('*')
+        .from('contracts')
+        .select('id, file_name, created_at')
         .eq('user_id', user.id)
-        .order('analyzed_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching contracts:', error);
@@ -60,12 +60,8 @@ function DashboardPageComponent() {
       } else {
         const formattedData = data.map((item: any) => ({
           id: item.id,
-          name: item.name,
-          status: item.status,
-          riskLevel: item.risk_level,
-          clauses: item.clauses,
-          analyzedAt: item.analyzed_at,
-          highRiskClauses: item.high_risk_clauses,
+          name: item.file_name,
+          analyzedAt: item.created_at,
         }));
         setContracts(formattedData);
       }
@@ -106,7 +102,7 @@ function DashboardPageComponent() {
     setIsLoading(true);
     setCurrentView('analysis');
     try {
-      const result = await analyzeContract(contractText, contractFileName, user.id);
+      const result = await analyzeContract(contractText, contractFileName);
       if (result.success && result.data) {
         setAnalysisResult(result.data);
         // Add the new contract to the top of the list optimistically
@@ -114,9 +110,6 @@ function DashboardPageComponent() {
             {
                 id: (Math.random() * 1000).toString(), // temporary id
                 name: contractFileName,
-                status: 'Analyzed',
-                riskLevel: 'Medium', // Placeholder, real data is in analysis
-                clauses: result.data.length,
                 analyzedAt: new Date().toISOString(),
             },
             ...prev
@@ -207,32 +200,6 @@ function DashboardPageComponent() {
 
 function MainDashboard({onAnalyzeNew, contracts, isLoading}: {onAnalyzeNew: () => void; contracts: Contract[], isLoading: boolean}) {
 
-  const riskDistribution = useMemo(() => {
-    const validContracts = contracts.filter(c => c && c.riskLevel && c.riskLevel !== 'N/A');
-
-    if (validContracts.length === 0) {
-      return [];
-    }
-
-    const distribution = validContracts.reduce((acc, contract) => {
-      const riskKey = contract.riskLevel as 'High' | 'Medium' | 'Low';
-      acc[riskKey] = (acc[riskKey] || 0) + 1;
-      return acc;
-    }, {} as Record<'High' | 'Medium' | 'Low', number>);
-
-    return [
-      { name: 'High', value: distribution.High || 0 },
-      { name: 'Medium', value: distribution.Medium || 0 },
-      { name: 'Low', value: distribution.Low || 0 },
-    ].filter(item => item.value > 0);
-  }, [contracts]);
-
-  const COLORS = {
-    High: 'hsl(var(--risk-high))',
-    Medium: 'hsl(var(--risk-medium))',
-    Low: 'hsl(var(--risk-low))',
-  };
-
   return (
     <div className="container mx-auto max-w-7xl px-6 sm:px-8 md:px-4 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
@@ -250,58 +217,8 @@ function MainDashboard({onAnalyzeNew, contracts, isLoading}: {onAnalyzeNew: () =
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-            <ContractsDataTable title="Recent Contract Analysis" data={contracts} isLoading={isLoading} />
-        </div>
-        <Card className="h-full bg-white/5 border-white/10 glass-card">
-            <CardHeader>
-                <CardTitle className="text-xl sm:text-2xl font-heading !text-white">Overall Risk Distribution</CardTitle>
-                <CardDescription className="!text-muted-foreground">Across all analyzed contracts</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="h-[300px] w-full relative">
-                  { !isLoading && riskDistribution.length > 0 && (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={riskDistribution}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                outerRadius={100}
-                                fill="#8884d8"
-                                dataKey="value"
-                                nameKey="name"
-                                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
-                                    if (percent === 0) return null;
-                                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                    const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                                    const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-
-                                    return (
-                                        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="font-bold text-sm">
-                                            {`${(percent * 100).toFixed(0)}%`}
-                                        </text>
-                                    );
-                                }}
-                            >
-                                {riskDistribution.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
-                                ))}
-                            </Pie>
-                            <Legend formatter={(value, entry) => <span className="text-white/80">{value}</span>} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                  {(isLoading || riskDistribution.length === 0) && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm rounded-lg">
-                        {isLoading ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <p className="text-muted-foreground text-center px-4">No data yet. Analyze a contract to see the risk distribution.</p>}
-                    </div>
-                  )}
-                </div>
-            </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-8">
+          <ContractsDataTable title="Recent Contract Analysis" data={contracts} isLoading={isLoading} />
       </div>
     </div>
   )

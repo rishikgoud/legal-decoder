@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { detectAndLabelClauses } from '@/ai/flows/detect-and-label-clauses';
@@ -10,7 +11,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { getOverallRisk } from '@/lib/utils';
 
 
-export async function analyzeContract(contractText: string, fileName: string, userId: string) {
+export async function analyzeContract(contractText: string, fileName: string) {
   if (!contractText || contractText.trim().length < 50) {
     return {
       success: false,
@@ -22,21 +23,15 @@ export async function analyzeContract(contractText: string, fileName: string, us
   try {
     const analysis = await detectAndLabelClauses({ contractText });
     
-    if (analysis && userId) {
-      const overallRisk = getOverallRisk(analysis);
-      const highRiskCount = analysis.filter(c => c.riskLevel === 'High').length;
+    const { data: { user } } = await supabase.auth.getUser();
 
+    if (analysis && user) {
       const { data, error } = await supabase
-        .from('contract_analyses')
+        .from('contracts')
         .insert([
           { 
-            user_id: userId,
-            name: fileName,
-            status: 'Analyzed',
-            risk_level: overallRisk,
-            clauses: analysis.length,
-            high_risk_clauses: highRiskCount,
-            analysis_data: analysis,
+            user_id: user.id,
+            file_name: fileName,
            },
         ])
         .select();
@@ -84,7 +79,7 @@ export async function askQuestion(contractText: string, question: string) {
 }
 
 
-export async function compareTwoContracts(contractOneText: string, contractTwoText: string) {
+export const compareTwoContracts = async (contractOneText: string, contractTwoText: string) => {
   if (!contractOneText || !contractTwoText) {
     return {
       success: false,

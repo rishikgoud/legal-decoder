@@ -1,4 +1,5 @@
 
+
 import {
   Card,
   CardContent,
@@ -6,8 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {Badge} from '@/components/ui/badge';
-import {MoreHorizontal, Loader2, FileText, AlertTriangle, ShieldCheck, BarChart, Calendar } from 'lucide-react';
+import {MoreHorizontal, FileText, Calendar } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,37 +19,12 @@ import {Button} from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Contract } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 
 type ContractsDataTableProps = {
   title: string;
   data: Contract[];
   isLoading: boolean;
 };
-
-const riskLevelToVariant = (
-  level: string | undefined
-): 'high' | 'medium' | 'low' | 'secondary' => {
-  switch (level) {
-    case 'High':
-      return 'high';
-    case 'Medium':
-      return 'medium';
-    case 'Low':
-      return 'low';
-    default:
-      return 'secondary';
-  }
-};
-
-const RiskIcon = ({ level }: { level: Contract['riskLevel'] }) => {
-    switch (level) {
-        case 'High': return <AlertTriangle className="h-4 w-4" />;
-        case 'Medium': return <AlertTriangle className="h-4 w-4" />;
-        case 'Low': return <ShieldCheck className="h-4 w-4" />;
-        default: return null;
-    }
-}
 
 export default function ContractsDataTable({
   title,
@@ -83,21 +58,7 @@ export default function ContractsDataTable({
                          <h3 className="font-bold text-md sm:text-lg text-white truncate">{contract.name}</h3>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs sm:text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                            <Badge variant={riskLevelToVariant(contract.riskLevel)} className="flex items-center gap-1.5 py-1 px-2.5 text-xs">
-                                <RiskIcon level={contract.riskLevel} />
-                                {contract.riskLevel} Risk
-                            </Badge>
-                        </div>
-                         <div className="flex items-center gap-1.5">
-                            <BarChart className="w-4 h-4" /> {contract.clauses} Clauses
-                         </div>
-                         {contract.highRiskClauses !== undefined && contract.highRiskClauses > 0 && (
-                             <div className="flex items-center gap-1.5 text-risk-high">
-                                 <AlertTriangle className="w-4 h-4" /> {contract.highRiskClauses} High-Risk
-                             </div>
-                         )}
-                         <div className="hidden sm:flex items-center gap-1.5">
+                         <div className="flex sm:flex items-center gap-1.5">
                              <Calendar className="w-4 h-4" /> {contract.analyzedAt ? format(new Date(contract.analyzedAt), 'PP') : 'N/A'}
                          </div>
                     </div>
