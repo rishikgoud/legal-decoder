@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Provide placeholder values to prevent initialization errors when .env is not set.
-// Replace these with your actual Supabase credentials in a .env.local file for full functionality.
+// For full functionality, create a .env file with your actual Supabase credentials.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ajjffccvbusuganyvipm.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
