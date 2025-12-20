@@ -21,14 +21,16 @@ export async function POST(req: Request) {
       .eq("user_id", userId);
 
     if (error) {
+      console.error("Supabase delete error:", error);
       return NextResponse.json(
-        { error: error.message },
+        { error: `Database error: ${error.message}` },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
+    console.error("API route error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

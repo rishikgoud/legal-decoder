@@ -4,7 +4,6 @@
 import {detectAndLabelClauses} from '@/ai/flows/detect-and-label-clauses';
 import {answerContractQuestions} from '@/ai/flows/answer-contract-questions';
 import {compareContracts} from '@/ai/flows/compare-contracts-flow';
-import { createSupabaseServerClient } from '@/lib/supabaseServer';
 
 export async function askQuestion(contractText: string, question: string) {
   if (!contractText || !question) {
@@ -76,7 +75,7 @@ export async function compareTwoContracts(
 
 export async function deleteContractAnalysis(analysisId: string, userId: string) {
   try {
-    const response = await fetch(`/api/delete`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/delete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
