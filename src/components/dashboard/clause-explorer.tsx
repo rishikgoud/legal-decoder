@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useTransition } from 'react';
@@ -257,7 +258,7 @@ const ClauseExplorer = () => {
                 <TabsList className="bg-background/80">
                   <TabsTrigger value="explanation">Simple Explanation</TabsTrigger>
                   <TabsTrigger value="wording">Standard Wording</TabsTrigger>
-                  <TabsTrigger value="risks">Implications & Risks</TabsTrigger>
+                  <TabsTrigger value="risks">Implications &amp; Risks</TabsTrigger>
                 </TabsList>
                 <div className="mt-4 p-4 bg-background/50 rounded-lg min-h-[300px]">
                   <TabsContent value="explanation" className="m-0">
