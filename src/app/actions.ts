@@ -76,7 +76,7 @@ export async function compareTwoContracts(
 
 export async function deleteContractAnalysis(analysisId: string, userId: string) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/delete`, {
+    const response = await fetch(`/api/delete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
