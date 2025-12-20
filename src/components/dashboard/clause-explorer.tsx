@@ -29,6 +29,7 @@ import { motion } from 'framer-motion';
 import { defineLegalTerm } from '@/ai/flows/define-legal-term';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Badge } from '../ui/badge';
 
 type Clause = {
   icon: React.ReactNode;
@@ -36,6 +37,7 @@ type Clause = {
   simpleExplanation: string;
   standardWording: string;
   implicationsAndRisks: string;
+  riskLevel: 'Low' | 'Medium' | 'High';
 };
 
 const commonClauses: Clause[] = [
@@ -48,6 +50,7 @@ const commonClauses: Clause[] = [
       'The "Indemnifying Party" shall indemnify, defend, and hold harmless the "Indemnified Party" from and against any and all claims, losses, damages, liabilities, and expenses, including reasonable attorneys\' fees, arising out of or related to the Indemnifying Party\'s breach of this Agreement.',
     implicationsAndRisks:
       'This is a major risk-shifting clause. If you are the indemnifying party, you could be responsible for significant costs. Pay close attention to the scope: what events trigger indemnification? Is it limited to third-party claims?',
+    riskLevel: 'High',
   },
   {
     icon: <Scale className="h-5 w-5 text-primary" />,
@@ -58,6 +61,7 @@ const commonClauses: Clause[] = [
       'In no event shall either party\'s aggregate liability arising out of or related to this agreement exceed the total amount paid by you hereunder in the 12 months preceding the last event giving rise to liability. In no event shall either party be liable for any indirect, incidental, special, or consequential damages, including loss of profits, data, or business opportunities.',
     implicationsAndRisks:
       "Crucial for financial risk management. A low cap benefits the party providing the service/product. A high cap or no cap is better for the paying party. The exclusion of 'consequential damages' is standard but can leave you without compensation for business losses.",
+    riskLevel: 'High',
   },
   {
     icon: <FileX className="h-5 w-5 text-primary" />,
@@ -68,6 +72,7 @@ const commonClauses: Clause[] = [
       'Either party may terminate this Agreement for any reason upon thirty (30) days prior written notice to the other party. This Agreement may be terminated immediately by either party for a material breach by the other party if such breach is not cured within fifteen (15) days of receiving written notice.',
     implicationsAndRisks:
       'Termination for convenience gives flexibility but can create instability. A short "cure period" for breaches gives less time to fix problems. Ensure the conditions for termination are clear and fair for both sides.',
+    riskLevel: 'Medium',
   },
   {
     icon: <Globe className="h-5 w-5 text-primary" />,
@@ -78,6 +83,7 @@ const commonClauses: Clause[] = [
       'This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware, without regard to its conflict of law principles. The parties consent to the exclusive jurisdiction of the state and federal courts located in Wilmington, Delaware.',
     implicationsAndRisks:
       "This has huge practical implications. If the specified jurisdiction is far from you, litigation can become prohibitively expensive and inconvenient. Always check if it's a favorable or neutral location.",
+    riskLevel: 'Medium',
   },
   {
     icon: <Swords className="h-5 w-5 text-primary" />,
@@ -88,6 +94,7 @@ const commonClauses: Clause[] = [
       'Neither party shall be liable for any failure to perform its obligations hereunder where such failure results from any cause beyond its reasonable control, including, without limitation, acts of God, war, terrorism, riots, or natural disasters.',
     implicationsAndRisks:
       'This clause is often overlooked until it\'s too late. The list of events should be reviewed. For example, does it include "pandemics" or "cyberattacks"? A broad definition can excuse non-performance too easily.',
+    riskLevel: 'Low',
   },
   {
     icon: <Copyright className="h-5 w-5 text-primary" />,
@@ -98,6 +105,7 @@ const commonClauses: Clause[] = [
       'All intellectual property rights in and to the services provided, including any deliverables, shall remain the exclusive property of the Provider. The Client is granted a limited, non-exclusive, non-transferable license to use the deliverables for its internal business purposes only.',
     implicationsAndRisks:
       'Critical for any creative or tech project. If you are paying for work, you need to ensure you own it or have a broad enough license to use it as needed. Look for terms like "work-for-hire" or "assignment of IP".',
+    riskLevel: 'High',
   },
   {
     icon: <Handshake className="h-5 w-5 text-primary" />,
@@ -108,6 +116,7 @@ const commonClauses: Clause[] = [
       'Each party (the "Receiving Party") shall keep confidential all non-public information and documentation of the other party (the "Disclosing Party"), marked as confidential or which would reasonably be considered confidential, and shall not use it for any purpose other than the performance of this Agreement.',
     implicationsAndRisks:
       'The definition of "Confidential Information" is key. Is it too broad or too narrow? Also, check the duration—how long must the information be kept secret? Some obligations can survive the termination of the contract for many years.',
+    riskLevel: 'Medium',
   },
   {
     icon: <Columns className="h-5 w-5 text-primary" />,
@@ -118,10 +127,11 @@ const commonClauses: Clause[] = [
       'If any provision of this Agreement is held to be invalid or unenforceable by a court of competent jurisdiction, the remaining provisions of this Agreement shall remain in full force and effect.',
     implicationsAndRisks:
       'This is a standard and generally low-risk clause that is beneficial to have. It prevents an entire agreement from being thrown out due to one problematic part.',
+    riskLevel: 'Low',
   },
 ];
 
-type ClauseDetail = Clause | { title: string; simpleExplanation: string; standardWording: string; implicationsAndRisks: string, icon: React.ReactNode };
+type ClauseDetail = Clause | { title: string; simpleExplanation: string; standardWording: string; implicationsAndRisks: string; riskLevel: 'Low' | 'Medium' | 'High'; icon: React.ReactNode };
 
 const ClauseExplorer = () => {
   const [selectedClause, setSelectedClause] = useState<ClauseDetail>(
@@ -154,6 +164,24 @@ const ClauseExplorer = () => {
       }
     });
   };
+
+  const riskLevelToVariant = (
+    level: 'High' | 'Medium' | 'Low'
+  ): 'high' | 'medium' | 'low' => {
+    return level.toLowerCase() as 'high' | 'medium' | 'low';
+  };
+
+  const riskCardClass = {
+      High: 'border-red-500/50 bg-red-500/5',
+      Medium: 'border-yellow-500/50 bg-yellow-500/5',
+      Low: 'border-green-500/50 bg-green-500/5',
+  };
+
+  const riskTextClass = {
+      High: 'text-red-400',
+      Medium: 'text-yellow-400',
+      Low: 'text-green-400',
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 h-full">
@@ -189,6 +217,7 @@ const ClauseExplorer = () => {
                   <div className="flex-1">
                     <p className="font-semibold">{clause.title}</p>
                   </div>
+                  <Badge variant={riskLevelToVariant(clause.riskLevel)}>{clause.riskLevel}</Badge>
                 </Button>
               ))}
             </div>
@@ -242,10 +271,12 @@ const ClauseExplorer = () => {
                     </blockquote>
                   </TabsContent>
                   <TabsContent value="risks" className="m-0">
-                     <Card className="border-yellow-500/50 bg-yellow-500/5">
+                     <Card className={cn(riskCardClass[selectedClause.riskLevel])}>
                         <CardHeader className="flex-row items-center gap-3 space-y-0">
-                            <AlertTriangle className="h-5 w-5 text-yellow-400" />
-                            <CardTitle className="text-yellow-400 text-lg">Pay Attention</CardTitle>
+                            <AlertTriangle className={cn("h-5 w-5", riskTextClass[selectedClause.riskLevel])} />
+                            <CardTitle className={cn("text-lg", riskTextClass[selectedClause.riskLevel])}>
+                                {selectedClause.riskLevel} Risk
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p className="text-base text-muted-foreground leading-relaxed">

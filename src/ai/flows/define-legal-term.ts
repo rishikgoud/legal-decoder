@@ -31,6 +31,9 @@ const DefineLegalTermOutputSchema = z.object({
     .describe(
       'The potential implications and risks associated with this term for the user.'
     ),
+  riskLevel: z
+    .enum(['Low', 'Medium', 'High'])
+    .describe('The typical risk level associated with this clause.'),
 });
 export type DefineLegalTermOutput = z.infer<typeof DefineLegalTermOutputSchema>;
 
@@ -53,6 +56,7 @@ For this term, you must provide the following, in a neutral and informative tone
 2.  **simpleExplanation**: A concise, easy-to-understand explanation in plain English.
 3.  **standardWording**: A typical, standard example of how this term or clause would be worded in a legal contract.
 4.  **implicationsAndRisks**: A summary of the key implications, potential risks, or what a user should pay attention to regarding this term.
+5.  **riskLevel**: Assess the typical risk this clause represents in a contract and assign a risk level of "Low", "Medium", or "High".
 
 Return the response strictly as a JSON object that adheres to the output schema.
 `,
