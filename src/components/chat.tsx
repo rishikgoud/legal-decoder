@@ -56,6 +56,7 @@ export default function Chat({ contractText }: ChatProps) {
           title: 'Error',
           description: result.error || 'Could not get a response.',
         });
+        // Remove the user's message if the AI fails to respond
         setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
       }
     } catch (error) {
@@ -64,7 +65,7 @@ export default function Chat({ contractText }: ChatProps) {
         title: 'An Unexpected Error Occurred',
         description: 'Please try again.',
       });
-      setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+       setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
     } finally {
       setIsLoading(false);
     }
@@ -72,6 +73,7 @@ export default function Chat({ contractText }: ChatProps) {
   
   useEffect(() => {
     if (scrollAreaRef.current) {
+      // The viewport is the first div inside the ScrollArea root
       const scrollableView = scrollAreaRef.current.querySelector('div');
       if (scrollableView) {
           scrollableView.scrollTo({
@@ -84,7 +86,7 @@ export default function Chat({ contractText }: ChatProps) {
 
 
   return (
-    <div className="flex flex-col h-[60vh]">
+    <div className="flex flex-col h-full">
       <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
         <div className="space-y-6">
           {messages.length === 0 && (
