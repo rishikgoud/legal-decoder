@@ -20,7 +20,7 @@ const loggedOutLinks = [
 
 const loggedInLinks = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard", label: "Analyze Contract" },
+  { href: "/analyze", label: "Analyze Contract" },
   { href: "/compare", label: "Compare" },
   { href: "/clause-explorer", label: "Clause Explorer" },
 ];
@@ -62,8 +62,6 @@ export function Header() {
 
   const navLinks = user ? loggedInLinks : loggedOutLinks;
 
-  const isLight = ['/dashboard', '/compare', '/clause-explorer', '/profile'].includes(pathname);
-
   return (
     <header className={cn(
         "sticky top-0 z-50 w-full border-b",
@@ -97,7 +95,7 @@ export function Header() {
                 className={cn(
                     "text-gray-300 hover:text-white",
                     "transition-colors",
-                    { "text-primary font-semibold": pathname === link.href && link.label !== 'Analyze Contract' } // Avoid highlighting both dashboard and analyze
+                    { "text-primary font-semibold": pathname === link.href }
                 )}
              >
                {link.label}
