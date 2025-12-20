@@ -10,11 +10,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Send, User, Bot, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 type Message = {
   id: number;
   sender: 'user' | 'ai';
   text: string;
+  clauseText?: string;
+  explanation?: string;
 };
 
 type ChatProps = {
@@ -47,7 +50,9 @@ export default function Chat({ contractText }: ChatProps) {
         const aiMessage: Message = {
           id: Date.now() + 1,
           sender: 'ai',
-          text: result.data,
+          text: result.data.answer,
+          clauseText: result.data.clauseText,
+          explanation: result.data.explanation,
         };
         setMessages((prev) => [...prev, aiMessage]);
       } else {
@@ -118,7 +123,29 @@ export default function Chat({ contractText }: ChatProps) {
                     : 'bg-muted'
                 )}
               >
-                <p>{message.text}</p>
+               {message.sender === 'ai' ? (
+                  <div className="space-y-4">
+                    <p className="font-semibold">{message.text}</p>
+                    {message.clauseText && (
+                       <Card className="bg-background/50">
+                          <CardHeader className="p-3">
+                            <CardTitle className="text-xs uppercase tracking-wider text-muted-foreground">Relevant Clause</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-3 pt-0">
+                            <p className="font-mono text-xs text-foreground/80">{message.clauseText}</p>
+                          </CardContent>
+                        </Card>
+                    )}
+                     {message.explanation && (
+                       <div>
+                         <p className="text-xs uppercase tracking-wider font-semibold text-primary mb-2">Explanation</p>
+                         <p>{message.explanation}</p>
+                       </div>
+                    )}
+                  </div>
+                ) : (
+                  <p>{message.text}</p>
+                )}
               </div>
               {message.sender === 'user' && (
                 <Avatar className="h-8 w-8">

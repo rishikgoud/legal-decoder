@@ -17,6 +17,8 @@ import {
   MessageCircle,
   Mail,
   Link2,
+  Languages,
+  Loader2,
 } from 'lucide-react';
 import {
   Accordion,
@@ -29,6 +31,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 
@@ -38,6 +44,9 @@ type AnalysisReportProps = {
   contractName: string;
   onStartNew: () => void;
   analysisId: string | null;
+  onLanguageChange: (lang: 'en' | 'hi' | 'te' | 'ta') => void;
+  currentLanguage: 'en' | 'hi' | 'te' | 'ta';
+  isTranslating: boolean;
 };
 
 const riskLevelToVariant = (
@@ -46,14 +55,25 @@ const riskLevelToVariant = (
   return level.toLowerCase() as 'high' | 'medium' | 'low';
 };
 
+const LanguageDisplay: Record<'en' | 'hi' | 'te' | 'ta', string> = {
+    en: 'English',
+    hi: 'Hindi',
+    te: 'Telugu',
+    ta: 'Tamil',
+};
+
 export default function AnalysisReport({
   analysisResult,
   contractName,
   onStartNew,
   analysisId,
+  onLanguageChange,
+  currentLanguage,
+  isTranslating,
 }: AnalysisReportProps) {
   const { toast } = useToast();
   const { summaryCards, overallRisk, riskScore } = useMemo(() => {
+    // Note: Calculations should always be based on the original, non-translated result.
     const highRiskCount = analysisResult.filter(
       (c) => c.riskLevel === 'High'
     ).length;
@@ -172,6 +192,22 @@ export default function AnalysisReport({
           </p>
         </div>
         <div className="flex items-center gap-2">
+           <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                {isTranslating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Languages className="mr-2 h-4 w-4" />}
+                {LanguageDisplay[currentLanguage]}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {(Object.keys(LanguageDisplay) as Array<keyof typeof LanguageDisplay>).map(lang => (
+                 <DropdownMenuItem key={lang} onSelect={() => onLanguageChange(lang)} disabled={isTranslating}>
+                   {LanguageDisplay[lang]}
+                 </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button variant="outline" onClick={onStartNew}><RotateCcw className="mr-2 h-4 w-4" /> New Analysis</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

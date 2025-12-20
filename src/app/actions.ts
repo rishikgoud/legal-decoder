@@ -5,6 +5,7 @@ import {detectAndLabelClauses} from '@/ai/flows/detect-and-label-clauses';
 import {answerContractQuestions} from '@/ai/flows/answer-contract-questions';
 import {compareContracts} from '@/ai/flows/compare-contracts-flow';
 import type { SelectedContract, MultiCompareContractsOutput } from '@/ai/schemas/compare-contracts-schema';
+import { translateAnalysis, type TranslateAnalysisInput, type TranslateAnalysisOutput } from '@/ai/flows/translate-analysis-flow';
 
 
 export async function askQuestion(contractText: string, question: string) {
@@ -18,7 +19,7 @@ export async function askQuestion(contractText: string, question: string) {
 
   try {
     const result = await answerContractQuestions({contractText, question});
-    return {success: true, data: result.answer, error: null};
+    return {success: true, data: result, error: null};
   } catch (error) {
     console.error('Error asking question:', error);
     return {
@@ -75,5 +76,30 @@ export async function compareContractsMulti(
       error: 'Failed to compare the contracts. The AI model may be unavailable.',
       data: null,
     };
+  }
+}
+
+export async function getTranslatedAnalysis(
+  clauses: { summary: string; riskReason: string; recommendation: string }[],
+  targetLanguage: 'en' | 'hi' | 'te' | 'ta'
+): Promise<{ success: boolean; data: TranslateAnalysisOutput[] | null; error: string | null; }> {
+  if (!clauses || clauses.length === 0 || !targetLanguage) {
+    return { success: false, error: 'Invalid input for translation.', data: null };
+  }
+
+  try {
+    // Phase 1: Translate one by one. Can be optimized to run in parallel.
+    const translatedClauses: TranslateAnalysisOutput[] = [];
+    for (const clause of clauses) {
+      const result = await translateAnalysis({
+        analysis: clause,
+        targetLanguage: targetLanguage,
+      });
+      translatedClauses.push(result);
+    }
+    return { success: true, data: translatedClauses, error: null };
+  } catch (error: any) {
+    console.error('Error translating analysis:', error);
+    return { success: false, error: 'Failed to translate the analysis.', data: null };
   }
 }

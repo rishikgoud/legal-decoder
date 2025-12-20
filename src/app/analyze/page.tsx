@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { DetectAndLabelClausesOutput } from '@/ai/schemas/detect-and-label-clauses-schema';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,9 @@ import { supabase } from '@/lib/supabaseClient';
 import AnalysisReport from '@/components/analysis-report';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import Chat from '@/components/chat';
+import { getTranslatedAnalysis } from '@/app/actions';
+import { type TranslateAnalysisOutput } from '@/ai/flows/translate-analysis-flow';
+
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
@@ -27,10 +30,31 @@ function AnalyzePageComponent() {
   const { toast } = useToast();
   const [contractText, setContractText] = useState('');
   const [contractFileName, setContractFileName] = useState('New Contract');
+
+  // Translation State
+  const [translatedAnalysis, setTranslatedAnalysis] = useState<TranslateAnalysisOutput[] | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [currentLang, setCurrentLang] = useState<'en' | 'hi' | 'te' | 'ta'>('en');
+
+  const processedAnalysis = useMemo(() => {
+    if (currentLang === 'en' || !translatedAnalysis || translatedAnalysis.length !== analysisResult?.length) {
+      return analysisResult;
+    }
+    // Merge translation back into the main analysis object
+    return analysisResult.map((clause, index) => ({
+      ...clause,
+      summary: translatedAnalysis[index].translatedSummary,
+      riskReason: translatedAnalysis[index].translatedRiskReason,
+      recommendation: translatedAnalysis[index].translatedRecommendation,
+    }));
+  }, [analysisResult, translatedAnalysis, currentLang]);
   
   const handleAnalyze = async (text: string, fileName: string) => {
     setContractText(text);
     setContractFileName(fileName);
+    // Reset translation state on new analysis
+    setCurrentLang('en');
+    setTranslatedAnalysis(null);
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -92,11 +116,53 @@ function AnalyzePageComponent() {
     setContractText('');
     setContractFileName('New Contract');
     setIsLoading(false);
+    // Reset translation state
+    setTranslatedAnalysis(null);
+    setCurrentLang('en');
      toast({
         title: "Ready for New Analysis",
         description: "The previous report is saved in your dashboard history.",
     });
   }
+
+  const handleLanguageChange = async (lang: 'en' | 'hi' | 'te' | 'ta') => {
+    setCurrentLang(lang);
+    if (lang === 'en' || !analysisResult) {
+      setTranslatedAnalysis(null); // Clear translation if switching back to English
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const clausesToTranslate = analysisResult.map(c => ({
+        summary: c.summary,
+        riskReason: c.riskReason,
+        recommendation: c.recommendation,
+      }));
+
+      const response = await getTranslatedAnalysis(clausesToTranslate, lang);
+      if (response.success && response.data) {
+        setTranslatedAnalysis(response.data);
+        toast({
+          title: "Translation Complete",
+          description: `Analysis is now displayed in ${lang}.`,
+        });
+      } else {
+        throw new Error(response.error || 'Translation failed.');
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Translation Failed',
+        description: 'Unable to translate at the moment. Showing English version.',
+      });
+      setCurrentLang('en'); // Revert to English on failure
+      setTranslatedAnalysis(null);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-gradient-to-br from-[#0B0C10] to-[#1A1A2E] text-white">
@@ -111,13 +177,16 @@ function AnalyzePageComponent() {
                 </p>
                 </div>
             </div>
-        ) : analysisResult ? (
+        ) : processedAnalysis ? (
             <div className="relative">
                 <AnalysisReport 
-                    analysisResult={analysisResult} 
+                    analysisResult={processedAnalysis} 
                     contractName={contractFileName} 
                     onStartNew={handleStartNewAnalysis}
                     analysisId={analysisId}
+                    onLanguageChange={handleLanguageChange}
+                    currentLanguage={currentLang}
+                    isTranslating={isTranslating}
                 />
                 <Dialog>
                   <DialogTrigger asChild>
