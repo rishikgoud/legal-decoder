@@ -62,15 +62,27 @@ export function Header() {
 
   const navLinks = user ? loggedInLinks : loggedOutLinks;
 
+  const isLight = ['/dashboard', '/compare', '/clause-explorer', '/profile'].includes(pathname);
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-background/80 backdrop-blur-lg">
-      <div className="container flex h-20 max-w-7xl items-center justify-between px-6 sm:px-8 md:px-4">
+    <header className={cn(
+        "sticky top-0 z-50 w-full border-b",
+        isLight ? "bg-white/80 border-slate-200" : "border-white/10 bg-background/80",
+        "backdrop-blur-lg"
+    )}>
+      <div className="container flex h-16 max-w-7xl items-center justify-between px-6 sm:px-8 md:px-4">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
-              <Scale className="h-6 w-6 text-white" />
+            <div className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-lg",
+                isLight ? "bg-slate-800" : "bg-white/10"
+            )}>
+              <Scale className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-heading">
+            <h1 className={cn(
+                "text-xl sm:text-2xl font-bold tracking-tight font-heading",
+                isLight ? "text-slate-900" : "text-white"
+            )}>
               Legal Decoder
             </h1>
           </Link>
@@ -82,7 +94,11 @@ export function Header() {
              <Link 
                 key={link.href + link.label} 
                 href={link.href} 
-                className={cn("text-gray-300 transition-colors hover:text-white", { "text-primary font-semibold": pathname === link.href })}
+                className={cn(
+                    isLight ? "text-slate-600 hover:text-slate-900" : "text-gray-300 hover:text-white",
+                    "transition-colors",
+                    { "text-primary font-semibold": pathname === link.href }
+                )}
              >
                {link.label}
              </Link>
@@ -130,7 +146,7 @@ export function Header() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <Menu className="h-6 w-6" />
+                    <Menu className={cn("h-6 w-6", isLight ? "text-slate-900" : "text-white")} />
                     <span className="sr-only">Open menu</span>
                   </Button>
                 </DropdownMenuTrigger>

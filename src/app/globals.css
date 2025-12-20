@@ -1,24 +1,23 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background-start-rgb: 11, 12, 16;
-    --background-end-rgb: 26, 26, 46;
     --background: 224 71% 4%;
     --foreground: 210 20% 98%;
     --card: 224 71% 4%;
     --card-foreground: 210 20% 98%;
     --popover: 224 71% 4%;
     --popover-foreground: 210 20% 98%;
-    --primary: 196 98% 55%; /* Bright Cyan/Blue */
+    --primary: 196 98% 55%;
     --primary-foreground: 224 71% 4%;
     --secondary: 215 28% 17%;
     --secondary-foreground: 210 20% 98%;
     --muted: 215 28% 17%;
-    --muted-foreground: 218 11% 65%; /* Corresponds to #9CA3AF / text-[#CCCCCC] */
-    --accent: 271 76% 53%; /* Purple */
+    --muted-foreground: 218 11% 65%;
+    --accent: 271 76% 53%;
     --accent-foreground: 210 20% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 20% 98%;
@@ -38,10 +37,8 @@
   }
 
   .dark {
-    --background-start-rgb: 11, 12, 16;
-    --background-end-rgb: 26, 26, 46;
     --background: 224 71% 4%;
-    --foreground: 210 20% 98%; /* Corresponds to #F5F5F5 */
+    --foreground: 210 20% 98%;
     --card: 224 71% 4%;
     --card-foreground: 210 20% 98%;
     --popover: 224 71% 4%;
@@ -51,7 +48,7 @@
     --secondary: 215 28% 17%;
     --secondary-foreground: 210 20% 98%;
     --muted: 215 28% 17%;
-    --muted-foreground: 218 11% 65%; /* Corresponds to #9CA3AF / text-[#CCCCCC] */
+    --muted-foreground: 218 11% 65%;
     --accent: 271 76% 53%;
     --accent-foreground: 210 20% 98%;
     --destructive: 0 63% 31%;
@@ -59,15 +56,33 @@
     --border: 215 28% 17%;
     --input: 215 28% 17%;
     --ring: 196 98% 55%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
 
     --risk-high: 0 72% 51%;
     --risk-medium: 45 93% 47%;
     --risk-low: 142 71% 45%;
+  }
+
+  /* Define light theme variables */
+  :root:not(.dark) {
+    --background: 220 20% 97%; /* Light gray-blue */
+    --foreground: 220 15% 20%; /* Dark slate */
+    --card: 0 0% 100%; /* White */
+    --card-foreground: 220 15% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 20%;
+    --primary: 196 98% 55%; /* Your blue */
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 15% 94%; /* Lighter gray */
+    --secondary-foreground: 220 15% 20%;
+    --muted: 220 15% 94%;
+    --muted-foreground: 220 10% 45%;
+    --accent: 271 76% 53%; /* Your purple */
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 196 98% 55%;
   }
 }
 
@@ -79,66 +94,17 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
-  
-  /* Use the specified text colors */
+
   h1, h2, h3, h4, h5, h6 {
-    color: #EAEAEA;
+    color: var(--foreground);
   }
 
   p {
-    color: #CCCCCC;
+    color: var(--muted-foreground);
   }
-
-  .text-hero-h1 {
-     color: #F5F5F5;
-  }
-
 }
 
 @layer utilities {
-  .glow-border {
-    position: relative;
-    overflow: hidden;
-  }
-  .glow-border::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: inherit;
-    padding: 1px; /* border thickness */
-    background: linear-gradient(120deg, hsl(var(--primary)), hsl(var(--accent)), #e100ff);
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
-  }
-
-  .glow-border:hover::before {
-      opacity: 0.75;
-  }
-
-  .rgb-text-animation {
-    background-image: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)), #e100ff, hsl(var(--primary)));
-    background-size: 200% auto;
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: rgb-text-flow 4s linear infinite;
-  }
-
-  @keyframes rgb-text-flow {
-    to {
-      background-position: 200% center;
-    }
-  }
-
   .glass-card {
     background: rgba(26, 26, 46, 0.5);
     backdrop-filter: blur(12px);
@@ -146,8 +112,10 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .bg-grid-white\/\[0\.05\] {
-    background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 40px 40px;
+  :root:not(.dark) .glass-card {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.05);
   }
 }

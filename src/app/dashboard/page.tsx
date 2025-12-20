@@ -3,20 +3,22 @@
 
 import {useState, useMemo, useEffect} from 'react';
 import {useToast} from '@/hooks/use-toast';
-import UploadForm from '@/components/upload-form';
 import Dashboard from '@/components/dashboard';
 import ClausePreview from '@/components/dashboard/clause-preview';
 import {DetectAndLabelClausesOutput} from '@/ai/schemas/detect-and-label-clauses-schema';
 import {Button} from '@/components/ui/button';
-import {FilePlus2, Loader2, ArrowLeft} from 'lucide-react';
-import {Card, CardContent, CardHeader, CardTitle, CardDescription} from '@/components/ui/card';
-import {ResponsiveContainer, PieChart, Pie, Cell, Legend} from 'recharts';
+import {FilePlus2, Loader2, ArrowLeft, UploadCloud} from 'lucide-react';
 import ContractsDataTable from '@/components/dashboard/contracts-data-table';
 import {Header} from '@/components/header';
 import type {Contract} from '@/lib/types';
 import {supabase} from '@/lib/supabaseClient';
 import AuthGuard from '@/components/AuthGuard';
 import {User} from '@supabase/supabase-js';
+import * as pdfjsLib from 'pdfjs-dist';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
 function DashboardPageComponent() {
   const [analysisResult, setAnalysisResult] =
@@ -24,13 +26,11 @@ function DashboardPageComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const {toast} = useToast();
   const [currentView, setCurrentView] = useState<
-    'dashboard' | 'uploader' | 'preview' | 'analysis'
+    'dashboard' | 'preview' | 'analysis'
   >('dashboard');
   const [contractText, setContractText] = useState('');
   const [contractFileName, setContractFileName] = useState('');
-  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
-
-
+  
   const [user, setUser] = useState<User | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [isLoadingContracts, setIsLoadingContracts] = useState(true);
@@ -129,12 +129,10 @@ function DashboardPageComponent() {
             }),
         });
         
-        // After starting the analysis, refetch contracts to show the 'Analyzing' status
         if (user) await fetchContracts(user.id);
 
         const result = await response.json();
 
-        // Refetch again to get the final status
         if (user) await fetchContracts(user.id);
 
         if (!response.ok) {
@@ -152,7 +150,7 @@ function DashboardPageComponent() {
             description: error.message || "An unknown error occurred.",
         });
         setAnalysisResult(null);
-        setCurrentView('dashboard'); // Go back to dashboard on failure
+        setCurrentView('dashboard');
     }
 
     setIsLoading(false);
@@ -164,22 +162,12 @@ function DashboardPageComponent() {
     setAnalysisResult(null);
     setIsLoading(false);
     setCurrentView('dashboard');
-    setSelectedContract(null);
-  };
-
-  const handleAnalyzeNew = () => {
-    setContractText('');
-    setContractFileName('');
-    setAnalysisResult(null);
-    setCurrentView('uploader');
   };
 
   const handleViewDetails = (contract: Contract) => {
     if (contract.status === 'Analyzed' && contract.analysis_data && !('error' in contract.analysis_data)) {
         setAnalysisResult(contract.analysis_data as DetectAndLabelClausesOutput);
-        // We don't have the original text, so we'll pass an empty string for the chat.
-        // This could be improved by storing the text in the DB.
-        setContractText('');
+        setContractText(''); 
         setCurrentView('analysis');
     } else {
         toast({
@@ -233,7 +221,6 @@ function DashboardPageComponent() {
     }
   };
 
-
   const renderContent = () => {
     switch (currentView) {
       case 'analysis':
@@ -260,8 +247,6 @@ function DashboardPageComponent() {
             </div>
           </div>
         );
-      case 'uploader':
-        return <UploadForm onPreview={handlePreview} isLoading={isLoading} />;
       case 'preview':
         return (
           <ClausePreview
@@ -274,7 +259,7 @@ function DashboardPageComponent() {
       default:
         return (
           <MainDashboard
-            onAnalyzeNew={handleAnalyzeNew}
+            onPreview={handlePreview}
             contracts={contracts || []}
             isLoading={isLoadingContracts}
             onViewDetails={handleViewDetails}
@@ -286,181 +271,140 @@ function DashboardPageComponent() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-gradient-to-br from-[#0B0C10] to-[#1A1A2E] text-white">
+    <div className="flex min-h-screen w-full flex-col bg-[#F0F8FF] text-slate-900">
       <Header />
       <main className="flex-1 z-10 py-8 sm:py-12">{renderContent()}</main>
-      <footer className="py-6 px-4 md:px-6 text-center text-sm text-muted-foreground z-10 border-t border-white/10 mt-auto">
-        <p>
-          &copy; {new Date().getFullYear()} Legal Decoder. All Rights Reserved.
-          This is not legal advice.
-        </p>
-      </footer>
     </div>
   );
 }
 
 function MainDashboard({
-  onAnalyzeNew,
+  onPreview,
   contracts,
   isLoading,
   onViewDetails,
   onDelete,
   onDownloadReport,
 }: {
-  onAnalyzeNew: () => void;
+  onPreview: (text: string, fileName: string) => void;
   contracts: Contract[];
   isLoading: boolean;
   onViewDetails: (contract: Contract) => void;
   onDelete: (contractId: string) => void;
   onDownloadReport: (contract: Contract) => void;
 }) {
-  const riskDistribution = useMemo(() => {
-    const validContracts = contracts.filter(
-      c => c && c.status === 'Analyzed' && c.riskLevel && c.riskLevel !== 'N/A'
-    );
 
-    if (validContracts.length === 0) {
-      return [];
+  const [isParsing, setIsParsing] = useState(false);
+  const { toast } = useToast();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsing(true);
+    let extractedText = '';
+    
+    try {
+      if (file.type === 'application/pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        for (let i = 0; i < pdf.numPages; i++) {
+          const page = await pdf.getPage(i + 1);
+          const content = await page.getTextContent();
+          extractedText += content.items.map((item: any) => item.str).join(" ") + '\n';
+        }
+      } else if (file.type === 'text/plain' || file.name.endsWith('.docx')) {
+         if (file.name.endsWith('.docx')) {
+            toast({
+                title: 'File Type Note',
+                description: `Full DOCX support is in progress. For now, text will be extracted but formatting may be lost.`,
+            });
+         }
+        extractedText = await file.text();
+      } else {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid File Type',
+            description: 'Please upload a PDF, DOCX, or text file.',
+        });
+        setIsParsing(false);
+        return;
+      }
+      
+      toast({
+        title: 'File Content Extracted',
+        description: 'The text from your file is ready for preview.',
+      });
+      onPreview(extractedText, file.name);
+
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      toast({
+        variant: 'destructive',
+        title: 'File Parsing Failed',
+        description: 'Could not extract text. Please paste the text manually.',
+      });
+    } finally {
+      setIsParsing(false);
     }
+    
+    e.target.value = ''; // Reset file input
+  }
 
-    const distribution = validContracts.reduce(
-      (acc, contract) => {
-        const riskKey = contract.riskLevel as 'High' | 'Medium' | 'Low';
-        acc[riskKey] = (acc[riskKey] || 0) + 1;
-        return acc;
-      },
-      {} as Record<'High' | 'Medium' | 'Low', number>
-    );
-
-    return [
-      {name: 'High', value: distribution.High || 0},
-      {name: 'Medium', value: distribution.Medium || 0},
-      {name: 'Low', value: distribution.Low || 0},
-    ].filter(item => item.value > 0);
-  }, [contracts]);
-
-  const COLORS = {
-    High: 'hsl(var(--risk-high))',
-    Medium: 'hsl(var(--risk-medium))',
-    Low: 'hsl(var(--risk-low))',
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const pastedText = e.clipboardData.getData('text');
+      onPreview(pastedText, 'pasted_contract.txt');
   };
 
+  const isDisabled = isLoading || isParsing;
+
   return (
-    <div className="container mx-auto max-w-7xl px-6 sm:px-8 md:px-4 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight font-heading">
-            Dashboard
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-            Get a quick overview of your contract analyses.
-          </p>
+    <div className="container mx-auto max-w-5xl px-4 sm:px-6 md:px-8">
+        <div className="text-center mb-10">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">Simplify Complex Legal Jargon</h1>
+            <p className="mt-3 text-lg text-slate-600">Upload your contract or paste specific clauses below to get an instant AI summary and risk analysis.</p>
         </div>
-        <Button
-          onClick={onAnalyzeNew}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground group w-full sm:w-auto"
-        >
-          <FilePlus2 className="mr-2 h-5 w-5 transition-transform group-hover:-translate-y-0.5" />
-          Analyze New Contract
-        </Button>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <ContractsDataTable
-            title="Recent Contract Analysis"
-            data={contracts}
-            isLoading={isLoading}
-            onViewDetails={onViewDetails}
-            onDelete={onDelete}
-            onDownloadReport={onDownloadReport}
-          />
-        </div>
-        <Card className="h-full bg-white/5 border-white/10 glass-card">
-          <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl font-heading !text-white">
-              Overall Risk Distribution
-            </CardTitle>
-            <CardDescription className="!text-muted-foreground">
-              Across all analyzed contracts
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full relative">
-              {!isLoading && riskDistribution.length > 0 && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={riskDistribution}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                      nameKey="name"
-                      label={({
-                        cx,
-                        cy,
-                        midAngle,
-                        innerRadius,
-                        outerRadius,
-                        percent,
-                        index,
-                      }) => {
-                        if (percent === 0) return null;
-                        const radius =
-                          innerRadius + (outerRadius - innerRadius) * 0.5;
-                        const x =
-                          cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                        const y =
-                          cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-
-                        return (
-                          <text
-                            x={x}
-                            y={y}
-                            fill="white"
-                            textAnchor={x > cx ? 'start' : 'end'}
-                            dominantBaseline="central"
-                            className="font-bold text-sm"
-                          >
-                            {`${(percent * 100).toFixed(0)}%`}
-                          </text>
-                        );
-                      }}
-                    >
-                      {riskDistribution.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[entry.name as keyof typeof COLORS]}
-                        />
-                      ))}
-                    </Pie>
-                    <Legend
-                      formatter={(value, entry) => (
-                        <span className="text-white/80">{value}</span>
-                      )}
+        <div className="bg-white rounded-xl shadow-lg p-6 max-w-3xl mx-auto">
+            <Tabs defaultValue="upload">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-100">
+                    <TabsTrigger value="upload">Upload File</TabsTrigger>
+                    <TabsTrigger value="paste">Paste Text</TabsTrigger>
+                </TabsList>
+                <TabsContent value="upload" className="mt-6">
+                    <input type="file" id="file-upload" className="hidden" onChange={handleFileChange} accept=".pdf,.docx,.txt" disabled={isDisabled} />
+                    <label htmlFor="file-upload" className="w-full flex items-center justify-center flex-col h-48 border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50/50 hover:border-primary transition-colors group">
+                        {isParsing ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <UploadCloud className="h-8 w-8 text-slate-400 group-hover:text-primary transition-colors" />}
+                        <p className="mt-4 font-semibold text-slate-600">{isParsing ? 'Parsing File...' : 'Drag & drop your file here'}</p>
+                        <p className="text-sm text-slate-500 mt-1">Supported formats: PDF, DOCX (Max 20MB)</p>
+                        <Button variant="default" size="sm" className="mt-4 pointer-events-none">Browse Files</Button>
+                    </label>
+                    <p className="text-xs text-slate-500 text-center mt-4">Your documents are encrypted and processed securely.</p>
+                </TabsContent>
+                <TabsContent value="paste" className="mt-6">
+                    <Textarea
+                        placeholder="Pasting your contract text here will take you to the preview..."
+                        onPaste={handlePaste}
+                        className="min-h-[200px] text-sm"
+                        disabled={isDisabled}
                     />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-              {(isLoading || riskDistribution.length === 0) && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm rounded-lg">
-                  {isLoading ? (
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  ) : (
-                    <p className="text-muted-foreground text-center px-4">
-                      No data yet. Analyze a contract to see the risk
-                      distribution.
-                    </p>
-                  )}
-                </div>
-              )}
+                </TabsContent>
+            </Tabs>
+        </div>
+
+        <div className="mt-16">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-slate-900">Recent Analyses</h2>
+                <Button variant="link" className="text-primary">View All History</Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <ContractsDataTable
+                data={contracts.slice(0,3)} // Show only latest 3 as per design
+                isLoading={isLoading}
+                onViewDetails={onViewDetails}
+                onDelete={onDelete}
+                onDownloadReport={onDownloadReport}
+             />
+        </div>
     </div>
   );
 }
