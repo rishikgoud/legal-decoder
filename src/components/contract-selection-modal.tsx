@@ -143,7 +143,7 @@ export default function ContractSelectionModal({ isOpen, onClose, onContractsSel
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-full max-w-4xl h-[90vh] sm:h-[80vh] flex flex-col glass-card">
+      <DialogContent className="w-full max-w-4xl h-[90vh] sm:h-[85vh] flex flex-col glass-card">
         <DialogHeader>
           <DialogTitle className="text-2xl font-heading">Add Contracts</DialogTitle>
           <DialogDescription>Select from your history or upload new documents to compare.</DialogDescription>
