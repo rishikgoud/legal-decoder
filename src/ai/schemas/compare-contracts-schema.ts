@@ -7,6 +7,7 @@
  */
 
 import {z} from 'zod';
+import { DetectAndLabelClausesOutput } from './detect-and-label-clauses-schema';
 
 export const CompareContractsInputSchema = z.object({
   contractOneText: z
@@ -56,3 +57,22 @@ export const CompareContractsOutputSchema = z.object({
 export type CompareContractsOutput = z.infer<
   typeof CompareContractsOutputSchema
 >;
+
+
+// For multi-compare UI
+export type SelectedContract = {
+  id: string;
+  name: string;
+  text: string;
+  source: 'DB' | 'New Upload';
+};
+
+export type ContractWithAnalysis = SelectedContract & {
+    analysis: DetectAndLabelClausesOutput
+}
+
+export type MultiCompareContractsOutput = {
+    globalSummary: string;
+    contracts: ContractWithAnalysis[];
+    riskDifferences: z.infer<typeof RiskDifferenceSchema>[];
+}

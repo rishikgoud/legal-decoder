@@ -2,8 +2,11 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PieChart, Pie, Cell, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Legend, ResponsiveContainer, Tooltip } from 'recharts';
 import { motion } from 'framer-motion';
+import { getOverallRisk } from '@/lib/utils';
+import { ContractWithAnalysis } from '@/ai/schemas/compare-contracts-schema';
+import { useMemo } from 'react';
 
 type RiskDistribution = {
   name: string;
@@ -11,10 +14,7 @@ type RiskDistribution = {
 };
 
 type ComparisonSummaryCardProps = {
-  name: string;
-  fileName: string;
-  summary: string;
-  riskDistribution: RiskDistribution[];
+  contract: ContractWithAnalysis;
 };
 
 const PIE_CHART_COLORS = {
@@ -33,37 +33,48 @@ const itemVariants = {
         stiffness: 100,
       },
     },
-  };
+};
 
-export default function ComparisonSummaryCard({
-  name,
-  fileName,
-  summary,
-  riskDistribution,
-}: ComparisonSummaryCardProps) {
+export default function ComparisonSummaryCard({ contract }: ComparisonSummaryCardProps) {
+
+   const { riskDistribution, overallRisk } = useMemo(() => {
+    const dist = contract.analysis.reduce((acc, clause) => {
+        const key = clause.riskLevel as keyof typeof PIE_CHART_COLORS;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {} as Record<'High' | 'Medium' | 'Low', number>);
+
+    const distribution = Object.entries(dist)
+        .map(([name, value]) => ({ name, value }))
+        .filter(item => item.value > 0);
+
+    return {
+      riskDistribution: distribution,
+      overallRisk: getOverallRisk(contract.analysis),
+    };
+  }, [contract.analysis]);
+  
   return (
     <motion.div variants={itemVariants}>
         <Card className="glass-card h-full">
             <CardHeader>
-                <CardTitle className="text-2xl font-heading !text-white">{name}</CardTitle>
-                <CardDescription className="!text-muted-foreground italic truncate">
-                {fileName}
+                <CardTitle className="text-xl font-heading !text-white truncate">{contract.name}</CardTitle>
+                <CardDescription className="!text-muted-foreground italic">
+                    Overall Risk: {overallRisk}
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div>
-                    <h4 className="font-semibold mb-2">Key Points:</h4>
-                    <ul className="space-y-2 text-muted-foreground list-disc list-inside">
-                        {summary.split('. ').filter(s => s.length > 1).map((point, i) => (
-                            <li key={i}>{point.trim()}{point.endsWith('.') ? '' : '.'}</li>
-                        ))}
-                    </ul>
-                </div>
-
-                {riskDistribution.length > 0 && (
-                  <div className="h-[200px] w-full">
+                {riskDistribution.length > 0 ? (
+                  <div className="h-[150px] w-full">
                       <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
+                            <Tooltip
+                                contentStyle={{
+                                    background: 'hsl(var(--background))',
+                                    borderColor: 'hsl(var(--border))',
+                                    borderRadius: 'var(--radius)',
+                                }}
+                            />
                               <Pie
                                   data={riskDistribution}
                                   cx="50%"
@@ -75,14 +86,18 @@ export default function ComparisonSummaryCard({
                                   nameKey="name"
                                   label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                               >
-                                  {riskDistribution.map((entry, index) => (
-                                      <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[entry.name as keyof typeof PIE_CHART_COLORS]} />
+                                  {riskDistribution.map((entry) => (
+                                      <Cell key={`cell-${entry.name}`} fill={PIE_CHART_COLORS[entry.name as keyof typeof PIE_CHART_COLORS]} />
                                   ))}
                               </Pie>
                               <Legend formatter={(value) => <span className="text-white/80">{value}</span>} />
                           </PieChart>
                       </ResponsiveContainer>
                   </div>
+                ) : (
+                    <div className='text-center text-muted-foreground h-[150px] flex items-center justify-center'>
+                        No risk data available.
+                    </div>
                 )}
             </CardContent>
         </Card>

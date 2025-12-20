@@ -4,6 +4,8 @@
 import {detectAndLabelClauses} from '@/ai/flows/detect-and-label-clauses';
 import {answerContractQuestions} from '@/ai/flows/answer-contract-questions';
 import {compareContracts} from '@/ai/flows/compare-contracts-flow';
+import type { SelectedContract, MultiCompareContractsOutput } from '@/ai/schemas/compare-contracts-schema';
+
 
 export async function askQuestion(contractText: string, question: string) {
   if (!contractText || !question) {
@@ -27,39 +29,42 @@ export async function askQuestion(contractText: string, question: string) {
   }
 }
 
-export async function compareTwoContracts(
-  contractOneText: string,
-  contractTwoText: string
-) {
-  if (!contractOneText || !contractTwoText) {
+export async function compareContractsMulti(
+  contracts: SelectedContract[]
+): Promise<{ success: boolean; data: MultiCompareContractsOutput | null; error: string | null; }> {
+  if (contracts.length < 2) {
     return {
       success: false,
-      error: 'Please provide the text for both contracts.',
-      data: null,
-    };
-  }
-
-  if (contractOneText.trim() === contractTwoText.trim()) {
-    return {
-      success: false,
-      error:
-        'Both contracts are identical. Please upload different documents to compare.',
+      error: 'Please provide at least two contracts to compare.',
       data: null,
     };
   }
 
   try {
-    // Run all AI calls in parallel for efficiency
-    const [comparisonResult, analysisA, analysisB] = await Promise.all([
-      compareContracts({contractOneText, contractTwoText}),
-      detectAndLabelClauses({contractText: contractOneText}),
-      detectAndLabelClauses({contractText: contractTwoText}),
-    ]);
+    const analyses = await Promise.all(
+      contracts.map(c => detectAndLabelClauses({ contractText: c.text }))
+    );
 
-    const result = {
-      comparison: comparisonResult,
-      analysisA,
-      analysisB,
+    const contractsWithAnalyses = contracts.map((contract, index) => ({
+      ...contract,
+      analysis: analyses[index],
+    }));
+
+    // The AI flow is still designed for two contracts, so we pass the first two.
+    // This part can be enhanced later to support true multi-way AI comparison.
+    const comparisonResult = await compareContracts({
+        contractOneText: contractsWithAnalyses[0].text,
+        contractTwoText: contractsWithAnalyses[1].text,
+    });
+    
+    // For now, we will construct a global summary manually. A better approach
+    // would be a dedicated AI call.
+    const globalSummary = `This comparison analyzes ${contracts.length} documents. The primary differences noted are between "${contracts[0].name}" and "${contracts[1].name}". ${comparisonResult.summaryDiff}`;
+
+    const result: MultiCompareContractsOutput = {
+        globalSummary: globalSummary,
+        contracts: contractsWithAnalyses,
+        riskDifferences: comparisonResult.riskDifferences
     };
 
     return {success: true, data: result, error: null};
