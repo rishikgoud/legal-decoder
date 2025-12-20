@@ -355,7 +355,7 @@ function DashboardPageComponent() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-[#F0F8FF] text-slate-900">
+    <div className="flex min-h-screen w-full flex-col bg-gradient-to-br from-[#0B0C10] to-[#1A1A2E] text-white">
       <Header />
       <main className="flex-1 z-10 py-8 sm:py-12">{renderContent()}</main>
       
@@ -371,12 +371,12 @@ function DashboardPageComponent() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4 space-y-4">
-             <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
+             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                 <div className="flex items-start gap-3">
-                    <ShieldAlert className="h-5 w-5 text-yellow-500 mt-1 flex-shrink-0" />
+                    <ShieldAlert className="h-5 w-5 text-yellow-400 mt-1 flex-shrink-0" />
                     <div>
-                        <h4 className="font-semibold text-yellow-800">Potential Risks Detected</h4>
-                        <p className="text-sm text-yellow-700">
+                        <h4 className="font-semibold text-yellow-300">Potential Risks Detected</h4>
+                        <p className="text-sm text-yellow-400/80">
                             This contract has a risk level of <span className="font-bold">{contractForNegotiation?.riskLevel}</span> with {contractForNegotiation?.highRiskClauses || 'several'} high-impact clauses. The agent will focus on mitigating these points.
                         </p>
                     </div>
@@ -489,33 +489,33 @@ function MainDashboard({
   const isDisabled = isLoading || isParsing;
 
   return (
-    <div className="container mx-auto max-w-5xl px-4 sm:px-6 md:px-8">
+    <div className="container mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
         <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">Simplify Complex Legal Jargon</h1>
-            <p className="mt-3 text-lg text-slate-600">Upload your contract or paste specific clauses below to get an instant AI summary and risk analysis.</p>
+            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">Simplify Complex Legal Jargon</h1>
+            <p className="mt-3 text-lg text-muted-foreground">Upload your contract or paste specific clauses below to get an instant AI summary and risk analysis.</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 max-w-3xl mx-auto">
+        <div className="glass-card rounded-xl p-6 max-w-4xl mx-auto">
             <Tabs defaultValue="upload">
-                <TabsList className="grid w-full grid-cols-2 bg-slate-100">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-900/80">
                     <TabsTrigger value="upload">Upload File</TabsTrigger>
                     <TabsTrigger value="paste">Paste Text</TabsTrigger>
                 </TabsList>
                 <TabsContent value="upload" className="mt-6">
                     <input type="file" id="file-upload" className="hidden" onChange={handleFileChange} accept=".pdf,.docx,.txt" disabled={isDisabled} />
-                    <label htmlFor="file-upload" className="w-full flex items-center justify-center flex-col h-48 border-2 border-dashed border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50/50 hover:border-primary transition-colors group">
-                        {isParsing ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <UploadCloud className="h-8 w-8 text-slate-400 group-hover:text-primary transition-colors" />}
-                        <p className="mt-4 font-semibold text-slate-600">{isParsing ? 'Parsing File...' : 'Drag & drop your file here'}</p>
-                        <p className="text-sm text-slate-500 mt-1">Supported formats: PDF, DOCX (Max 20MB)</p>
-                        <Button variant="default" size="sm" className="mt-4 pointer-events-none">Browse Files</Button>
+                    <label htmlFor="file-upload" className="w-full flex items-center justify-center flex-col h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-white/5 hover:border-primary transition-colors group">
+                        {isParsing ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <UploadCloud className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />}
+                        <p className="mt-4 font-semibold text-foreground">{isParsing ? 'Parsing File...' : 'Drag & drop your file here'}</p>
+                        <p className="text-sm text-muted-foreground mt-1">Supported formats: PDF, DOCX (Max 20MB)</p>
+                        <Button variant="outline" size="sm" className="mt-4 pointer-events-none bg-transparent">Browse Files</Button>
                     </label>
-                    <p className="text-xs text-slate-500 text-center mt-4">Your documents are encrypted and processed securely.</p>
+                    <p className="text-xs text-muted-foreground text-center mt-4">Your documents are encrypted and processed securely.</p>
                 </TabsContent>
                 <TabsContent value="paste" className="mt-6">
                     <Textarea
                         placeholder="Pasting your contract text here will take you to the preview..."
                         onPaste={handlePaste}
-                        className="min-h-[200px] text-sm"
+                        className="min-h-[200px] text-sm bg-transparent"
                         disabled={isDisabled}
                     />
                 </TabsContent>
@@ -524,11 +524,11 @@ function MainDashboard({
 
         <div className="mt-16">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-slate-900">Recent Analyses</h2>
+                <h2 className="text-2xl font-bold text-white">Recent Analyses</h2>
                 <Button variant="link" className="text-primary">View All History</Button>
             </div>
             <ContractsDataTable
-                data={contracts.slice(0,3)} // Show only latest 3 as per design
+                data={contracts}
                 isLoading={isLoading}
                 onViewDetails={onViewDetails}
                 onDelete={onDelete}
@@ -547,5 +547,3 @@ export default function DashboardPage() {
     </AuthGuard>
   );
 }
-
-    

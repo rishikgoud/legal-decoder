@@ -1,24 +1,8 @@
 
 import {
-  MoreHorizontal,
   FileText,
-  Trash2,
-  Eye,
-  Download,
-  ShieldAlert,
-  Frown,
   Loader2,
-  Bot,
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import {Button} from '@/components/ui/button';
 import {Contract} from '@/lib/types';
 import {Skeleton} from '@/components/ui/skeleton';
 import {
@@ -32,7 +16,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {useState} from 'react';
-import {useUser} from '@/firebase/provider';
 import ContractCard from './contract-card';
 
 type ContractsDataTableProps = {
@@ -56,7 +39,6 @@ export default function ContractsDataTable({
   const [contractToDelete, setContractToDelete] = useState<Contract | null>(
     null
   );
-  const {user} = useUser();
 
   const handleDeleteClick = (contract: Contract) => {
     setContractToDelete(contract);
@@ -75,7 +57,7 @@ export default function ContractsDataTable({
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {Array.from({length: 3}).map((_, i) => (
-          <Skeleton key={`skeleton-${i}`} className="h-48 w-full bg-slate-200" />
+          <Skeleton key={`skeleton-${i}`} className="h-48 w-full bg-slate-800" />
         ))}
       </div>
     );
@@ -83,12 +65,12 @@ export default function ContractsDataTable({
 
   if (!data || data.length === 0) {
     return (
-      <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg">
-        <FileText className="mx-auto h-12 w-12 text-slate-400" />
-        <h3 className="mt-4 text-lg font-semibold text-slate-800">
+      <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
+        <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+        <h3 className="mt-4 text-lg font-semibold text-foreground">
           No contracts analyzed yet
         </h3>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Get started by analyzing your first contract.
         </p>
       </div>
@@ -135,5 +117,3 @@ export default function ContractsDataTable({
     </>
   );
 }
-
-    
