@@ -32,24 +32,12 @@ function DashboardPageComponent() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [isLoadingContracts, setIsLoadingContracts] = useState(true);
 
-  useEffect(() => {
-    async function fetchUserAndContracts() {
-      const {
-        data: {user},
-      } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (!user) {
-        setIsLoadingContracts(false);
-        setContracts([]);
-        return;
-      }
-
+  async function fetchContracts(userId: string) {
       setIsLoadingContracts(true);
       const {data, error} = await supabase
         .from('contract_analyses')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('analyzed_at', {ascending: false});
 
       if (error) {
@@ -76,18 +64,34 @@ function DashboardPageComponent() {
         setContracts(formattedData);
       }
       setIsLoadingContracts(false);
+  }
+
+  useEffect(() => {
+    async function fetchUserAndContracts() {
+      const {
+        data: {user},
+      } = await supabase.auth.getUser();
+      setUser(user);
+
+      if (user) {
+        fetchContracts(user.id);
+      } else {
+        setIsLoadingContracts(false);
+        setContracts([]);
+      }
     }
 
     fetchUserAndContracts();
 
     const {data: authListener} = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (
-          event === 'SIGNED_IN' ||
-          event === 'SIGNED_OUT' ||
-          event === 'USER_UPDATED'
-        ) {
-          fetchUserAndContracts();
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+        if (currentUser) {
+          fetchContracts(currentUser.id);
+        } else {
+          setContracts([]);
+          setIsLoadingContracts(false);
         }
       }
     );
@@ -115,35 +119,20 @@ function DashboardPageComponent() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ contractText, fileName: contractFileName }),
+            body: JSON.stringify({
+                userId: user.id,
+                fileName: contractFileName,
+                contractText: contractText,
+            }),
         });
+        
+        // After starting the analysis, refetch contracts to show the 'Analyzing' status
+        await fetchContracts(user.id);
 
         const result = await response.json();
 
-        // Refetch contracts to get the new record and its final status
-        const { data: updatedContracts, error: fetchError } = await supabase
-            .from('contract_analyses')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('analyzed_at', { ascending: false });
-
-        if (fetchError) {
-            console.error('Error refetching contracts:', fetchError);
-        } else {
-            const formattedData = updatedContracts.map(
-                (item: any): Contract => ({
-                  id: item.id,
-                  name: item.file_name,
-                  status: item.status,
-                  riskLevel: item.risk_level,
-                  clauses: item.clauses_count,
-                  analyzedAt: item.analyzed_at,
-                  highRiskClauses: item.high_risk_clauses_count,
-                  analysis_data: item.analysis_data,
-                })
-            );
-            setContracts(formattedData);
-        }
+        // Refetch again to get the final status
+        await fetchContracts(user.id);
 
         if (!response.ok) {
             throw new Error(result.error || 'Analysis failed');

@@ -1,32 +1,35 @@
 import {NextResponse} from 'next/server';
-import {createSupabaseServerClient} from '@/lib/supabaseServer';
 import {detectAndLabelClauses} from '@/ai/flows/detect-and-label-clauses';
 import {type DetectAndLabelClausesOutput} from '@/ai/schemas/detect-and-label-clauses-schema';
 import {getOverallRisk} from '@/lib/utils';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function POST(req: Request) {
-  const supabase = createSupabaseServerClient();
-  const {
-    data: {user},
-  } = await supabase.auth.getUser();
+  const { userId, fileName, contractText } = await req.json();
 
-  if (!user) {
+  if (!userId) {
     return NextResponse.json(
-      {error: 'User not authenticated'},
-      {status: 401}
+      { error: "Missing userId" },
+      { status: 400 }
     );
   }
 
-  const { contractText, fileName } = await req.json();
+  if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json({error: 'AI service API key is missing from environment variables.'}, {status: 500});
+  }
+  
+  if (!contractText || contractText.trim().length < 50) {
+    return NextResponse.json({error: 'Contract text is too short. Please provide a valid contract.'}, {status: 400});
+  }
 
-  console.log(`Starting analysis for: ${fileName}, User: ${user.id}`);
+  console.log(`Starting analysis for: ${fileName}, User: ${userId}`);
 
   // 1. Create initial record in DB with 'Analyzing' status
-  const {data: initialRecord, error: insertError} = await supabase
+  const {data: initialRecord, error: insertError} = await supabaseAdmin
     .from('contract_analyses')
     .insert([
       {
-        user_id: user.id,
+        user_id: userId,
         file_name: fileName,
         status: 'Analyzing',
         risk_level: 'N/A',
@@ -52,14 +55,6 @@ export async function POST(req: Request) {
 
   try {
     // 2. Run the AI analysis
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error('AI service API key is missing from environment variables.');
-    }
-    
-    if (!contractText || contractText.trim().length < 50) {
-      throw new Error('Contract text is too short. Please provide a valid contract.');
-    }
-    
     const analysis: DetectAndLabelClausesOutput = await detectAndLabelClauses({contractText});
     console.log(`AI response received for analysis ID: ${analysisId}`);
 
@@ -68,7 +63,7 @@ export async function POST(req: Request) {
     const overallRisk = getOverallRisk(analysis);
     const highRiskCount = analysis.filter(c => c.riskLevel === 'High').length;
 
-    const {data: updatedRecord, error: updateError} = await supabase
+    const {data: updatedRecord, error: updateError} = await supabaseAdmin
       .from('contract_analyses')
       .update({
         status: 'Analyzed',
@@ -95,7 +90,7 @@ export async function POST(req: Request) {
     console.error(`Analysis failed for ID: ${analysisId} with error:`, error.message);
 
     // 4. Update DB record on failure
-    const {error: errorUpdateError} = await supabase
+    const {error: errorUpdateError} = await supabaseAdmin
       .from('contract_analyses')
       .update({
         status: 'Error',
