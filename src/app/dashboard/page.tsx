@@ -3,8 +3,6 @@
 
 import {useState, useMemo, useEffect} from 'react';
 import {useToast} from '@/hooks/use-toast';
-import Dashboard from '@/components/dashboard';
-import ClausePreview from '@/components/dashboard/clause-preview';
 import {DetectAndLabelClausesOutput} from '@/ai/schemas/detect-and-label-clauses-schema';
 import {Button} from '@/components/ui/button';
 import {FilePlus2, Loader2, ArrowLeft, UploadCloud, Bot, ShieldAlert, MessageCircle} from 'lucide-react';
@@ -31,16 +29,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import Chat from '@/components/chat';
+import AnalysisReport from '@/components/analysis-report';
+import { getTranslatedAnalysis, type TranslateAnalysisOutput } from '@/app/actions';
+
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
 function DashboardPageComponent() {
   const [analysisResult, setAnalysisResult] =
     useState<DetectAndLabelClausesOutput | null>(null);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const {toast} = useToast();
   const [currentView, setCurrentView] = useState<
-    'dashboard' | 'preview' | 'analysis'
+    'dashboard' | 'analysis'
   >('dashboard');
   const [contractText, setContractText] = useState('');
   const [contractFileName, setContractFileName] = useState('');
@@ -54,6 +56,24 @@ function DashboardPageComponent() {
   const [contractForNegotiation, setContractForNegotiation] = useState<Contract | null>(null);
   const [isNegotiationApproved, setIsNegotiationApproved] = useState(false);
   const [isAgentRunning, setIsAgentRunning] = useState(false);
+
+  // Translation State
+  const [translatedAnalysis, setTranslatedAnalysis] = useState<TranslateAnalysisOutput[] | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [currentLang, setCurrentLang] = useState<'en' | 'hi' | 'te' | 'ta'>('en');
+
+  const processedAnalysis = useMemo(() => {
+    if (currentLang === 'en' || !translatedAnalysis || translatedAnalysis.length !== analysisResult?.length) {
+      return analysisResult;
+    }
+    // Merge translation back into the main analysis object
+    return analysisResult.map((clause, index) => ({
+      ...clause,
+      summary: translatedAnalysis[index].translatedSummary,
+      riskReason: translatedAnalysis[index].translatedRiskReason,
+      recommendation: translatedAnalysis[index].translatedRecommendation,
+    }));
+  }, [analysisResult, translatedAnalysis, currentLang]);
 
 
   async function fetchContracts(userId: string) {
@@ -125,69 +145,66 @@ function DashboardPageComponent() {
     };
   }, [toast]);
 
-  const handlePreview = (text: string, fileName: string) => {
-    setContractText(text);
-    setContractFileName(fileName);
-    setCurrentView('preview');
-  };
-
-  const handleAnalyze = async () => {
-    if (!contractText || !user) return;
-
-    setIsLoading(true);
-    setCurrentView('analysis');
-
-    try {
-        const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                userId: user.id,
-                fileName: contractFileName,
-                contractText: contractText,
-            }),
-        });
-        
-        if (user) await fetchContracts(user.id);
-
-        const result = await response.json();
-
-        if (user) await fetchContracts(user.id);
-
-        if (!response.ok) {
-            throw new Error(result.error || 'Analysis failed');
-        }
-
-        if (result.data?.analysis_data) {
-            setAnalysisResult(result.data.analysis_data as DetectAndLabelClausesOutput);
-        }
-
-    } catch (error: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Analysis Failed',
-            description: error.message || "An unknown error occurred.",
-        });
-        setAnalysisResult(null);
-        setCurrentView('dashboard');
-    }
-
-    setIsLoading(false);
-  };
-
-  const handleReset = () => {
-    setContractText('');
-    setContractFileName('');
+  const handleStartNewAnalysis = () => {
     setAnalysisResult(null);
+    setAnalysisId(null);
+    setContractText('');
+    setContractFileName('New Contract');
     setIsLoading(false);
     setCurrentView('dashboard');
+    // Reset translation state
+    setTranslatedAnalysis(null);
+    setCurrentLang('en');
+     toast({
+        title: "Ready for New Analysis",
+        description: "The previous report is saved in your dashboard history.",
+    });
+  }
+
+  const handleLanguageChange = async (lang: 'en' | 'hi' | 'te' | 'ta') => {
+    setCurrentLang(lang);
+    if (lang === 'en' || !analysisResult) {
+      setTranslatedAnalysis(null); // Clear translation if switching back to English
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const clausesToTranslate = analysisResult.map(c => ({
+        summary: c.summary,
+        riskReason: c.riskReason,
+        recommendation: c.recommendation,
+      }));
+
+      const response = await getTranslatedAnalysis(clausesToTranslate, lang);
+      if (response.success && response.data) {
+        setTranslatedAnalysis(response.data);
+        toast({
+          title: "Translation Complete",
+          description: `Analysis is now displayed in ${lang}.`,
+        });
+      } else {
+        throw new Error(response.error || 'Translation failed.');
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Translation Failed',
+        description: 'Unable to translate at the moment. Showing English version.',
+      });
+      setCurrentLang('en'); // Revert to English on failure
+      setTranslatedAnalysis(null);
+    } finally {
+      setIsTranslating(false);
+    }
   };
+
 
   const handleViewDetails = (contract: Contract) => {
     if (contract.status === 'Analyzed' && contract.analysis_data && !('error' in contract.analysis_data)) {
         setAnalysisResult(contract.analysis_data as DetectAndLabelClausesOutput);
+        setAnalysisId(contract.id);
+        setContractFileName(contract.name);
         
         // Extract original contract text from analysis data
         const fullText = (contract.analysis_data as DetectAndLabelClausesOutput)
@@ -309,42 +326,51 @@ function DashboardPageComponent() {
   const renderContent = () => {
     switch (currentView) {
       case 'analysis':
-        return analysisResult ? (
-          <div className='relative'>
-            <div className="container mx-auto max-w-7xl px-4 sm:px-6 md:px-8 mb-8">
-              <Button onClick={handleReset} variant="outline">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
-              </Button>
+        return processedAnalysis ? (
+           <div className="relative">
+                <div className="container mx-auto max-w-7xl px-4 sm:px-6 md:px-8 mb-8">
+                  <Button onClick={handleStartNewAnalysis} variant="outline">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Dashboard
+                  </Button>
+                </div>
+                <AnalysisReport 
+                    analysisResult={processedAnalysis} 
+                    contractName={contractFileName} 
+                    onStartNew={handleStartNewAnalysis}
+                    analysisId={analysisId}
+                    onLanguageChange={handleLanguageChange}
+                    currentLanguage={currentLang}
+                    isTranslating={isTranslating}
+                />
+                <Dialog>
+                  <DialogTrigger asChild>
+                      <Button className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-2xl" size="icon">
+                          <Bot className="h-8 w-8" />
+                      </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl h-[70vh] flex flex-col p-0">
+                      <DialogHeader className='p-6 pb-2'>
+                          <DialogTitle>Ask AI about this Contract</DialogTitle>
+                      </DialogHeader>
+                      <Chat contractText={contractText} />
+                  </DialogContent>
+                </Dialog>
             </div>
-            <Dashboard
-              analysisResult={analysisResult}
-              contractText={contractText}
-            />
-          </div>
         ) : (
           <div className="container mx-auto max-w-4xl py-12 px-6 sm:px-8 md:px-4 flex items-center justify-center h-full">
             <div className="space-y-4 animate-in fade-in duration-500 text-center">
               <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
               <p className="text-lg text-muted-foreground">
-                AI is decoding your contract... this may take a moment.
+                Loading analysis...
               </p>
             </div>
           </div>
-        );
-      case 'preview':
-        return (
-          <ClausePreview
-            contractText={contractText}
-            onAnalyze={handleAnalyze}
-            isLoading={isLoading}
-          />
         );
       case 'dashboard':
       default:
         return (
           <MainDashboard
-            onPreview={handlePreview}
             contracts={contracts || []}
             isLoading={isLoadingContracts}
             onViewDetails={handleViewDetails}
@@ -409,7 +435,6 @@ function DashboardPageComponent() {
 }
 
 function MainDashboard({
-  onPreview,
   contracts,
   isLoading,
   onViewDetails,
@@ -417,7 +442,6 @@ function MainDashboard({
   onDownloadReport,
   onStartNegotiation,
 }: {
-  onPreview: (text: string, fileName: string) => void;
   contracts: Contract[];
   isLoading: boolean;
   onViewDetails: (contract: Contract) => void;
@@ -425,103 +449,11 @@ function MainDashboard({
   onDownloadReport: (contract: Contract) => void;
   onStartNegotiation: (contract: Contract) => void;
 }) {
-
-  const [isParsing, setIsParsing] = useState(false);
-  const { toast } = useToast();
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsParsing(true);
-    let extractedText = '';
-    
-    try {
-      if (file.type === 'application/pdf') {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        for (let i = 0; i < pdf.numPages; i++) {
-          const page = await pdf.getPage(i + 1);
-          const content = await page.getTextContent();
-          extractedText += content.items.map((item: any) => item.str).join(" ") + '\n';
-        }
-      } else if (file.type === 'text/plain' || file.name.endsWith('.docx')) {
-         if (file.name.endsWith('.docx')) {
-            toast({
-                title: 'File Type Note',
-                description: `Full DOCX support is in progress. For now, text will be extracted but formatting may be lost.`,
-            });
-         }
-        extractedText = await file.text();
-      } else {
-        toast({
-            variant: 'destructive',
-            title: 'Invalid File Type',
-            description: 'Please upload a PDF, DOCX, or text file.',
-        });
-        setIsParsing(false);
-        return;
-      }
-      
-      toast({
-        title: 'File Content Extracted',
-        description: 'The text from your file is ready for preview.',
-      });
-      onPreview(extractedText, file.name);
-
-    } catch (error) {
-      console.error('Error parsing file:', error);
-      toast({
-        variant: 'destructive',
-        title: 'File Parsing Failed',
-        description: 'Could not extract text. Please paste the text manually.',
-      });
-    } finally {
-      setIsParsing(false);
-    }
-    
-    e.target.value = ''; // Reset file input
-  }
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const pastedText = e.clipboardData.getData('text');
-      onPreview(pastedText, 'pasted_contract.txt');
-  };
-
-  const isDisabled = isLoading || isParsing;
-
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
         <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">Simplify Complex Legal Jargon</h1>
-            <p className="mt-3 text-lg text-muted-foreground">Upload your contract or paste specific clauses below to get an instant AI summary and risk analysis.</p>
-        </div>
-
-        <div className="glass-card rounded-xl p-6 max-w-4xl mx-auto">
-            <Tabs defaultValue="upload">
-                <TabsList className="grid w-full grid-cols-2 bg-slate-900/80">
-                    <TabsTrigger value="upload">Upload File</TabsTrigger>
-                    <TabsTrigger value="paste">Paste Text</TabsTrigger>
-                </TabsList>
-                <TabsContent value="upload" className="mt-6">
-                    <input type="file" id="file-upload" className="hidden" onChange={handleFileChange} accept=".pdf,.docx,.txt" disabled={isDisabled} />
-                    <label htmlFor="file-upload" className="w-full flex items-center justify-center flex-col h-48 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-white/5 hover:border-primary transition-colors group">
-                        {isParsing ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : <UploadCloud className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />}
-                        <p className="mt-4 font-semibold text-foreground">{isParsing ? 'Parsing File...' : 'Drag & drop your file here'}</p>
-                        <p className="text-sm text-muted-foreground mt-1">Supported formats: PDF, DOCX (Max 20MB)</p>
-                        <Button variant="outline" size="sm" className="mt-4 pointer-events-none bg-transparent">Browse Files</Button>
-                    </label>
-                    <p className="text-xs text-muted-foreground text-center mt-4">Your documents are encrypted and processed securely.</p>
-                </TabsContent>
-                <TabsContent value="paste" className="mt-6">
-                    <Textarea
-                        placeholder="Pasting your contract text here will take you to the preview..."
-                        onPaste={handlePaste}
-                        className="min-h-[200px] text-sm bg-transparent"
-                        disabled={isDisabled}
-                    />
-                </TabsContent>
-            </Tabs>
+            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">Dashboard</h1>
+            <p className="mt-3 text-lg text-muted-foreground">Review and manage your recent contract analyses.</p>
         </div>
 
         <div className="mt-16">
