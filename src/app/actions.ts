@@ -1,8 +1,10 @@
+
 'use server';
 
 import {detectAndLabelClauses} from '@/ai/flows/detect-and-label-clauses';
 import {answerContractQuestions} from '@/ai/flows/answer-contract-questions';
 import {compareContracts} from '@/ai/flows/compare-contracts-flow';
+import { createSupabaseServerClient } from '@/lib/supabaseServer';
 
 export async function askQuestion(contractText: string, question: string) {
   if (!contractText || !question) {
@@ -70,4 +72,25 @@ export async function compareTwoContracts(
       data: null,
     };
   }
+}
+
+export async function deleteContractAnalysis(analysisId: string) {
+  const supabase = createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'User not authenticated' };
+  }
+
+  const { error } = await supabase
+    .from('contract_analyses')
+    .delete()
+    .match({ id: analysisId, user_id: user.id });
+
+  if (error) {
+    console.error('Error deleting contract analysis:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, error: null };
 }

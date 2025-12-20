@@ -1,3 +1,4 @@
+
 'use client';
 
 import {useState, useMemo, useEffect} from 'react';
@@ -16,6 +17,8 @@ import type {Contract} from '@/lib/types';
 import {supabase} from '@/lib/supabaseClient';
 import AuthGuard from '@/components/AuthGuard';
 import {User} from '@supabase/supabase-js';
+import { deleteContractAnalysis } from '@/app/actions';
+import AnalysisReport from '@/components/analysis-report';
 
 function DashboardPageComponent() {
   const [analysisResult, setAnalysisResult] =
@@ -23,10 +26,12 @@ function DashboardPageComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const {toast} = useToast();
   const [currentView, setCurrentView] = useState<
-    'dashboard' | 'uploader' | 'preview' | 'analysis'
+    'dashboard' | 'uploader' | 'preview' | 'analysis' | 'report'
   >('dashboard');
   const [contractText, setContractText] = useState('');
   const [contractFileName, setContractFileName] = useState('');
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+
 
   const [user, setUser] = useState<User | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -127,12 +132,12 @@ function DashboardPageComponent() {
         });
         
         // After starting the analysis, refetch contracts to show the 'Analyzing' status
-        await fetchContracts(user.id);
+        if (user) await fetchContracts(user.id);
 
         const result = await response.json();
 
         // Refetch again to get the final status
-        await fetchContracts(user.id);
+        if (user) await fetchContracts(user.id);
 
         if (!response.ok) {
             throw new Error(result.error || 'Analysis failed');
@@ -161,6 +166,7 @@ function DashboardPageComponent() {
     setAnalysisResult(null);
     setIsLoading(false);
     setCurrentView('dashboard');
+    setSelectedContract(null);
   };
 
   const handleAnalyzeNew = () => {
@@ -170,8 +176,67 @@ function DashboardPageComponent() {
     setCurrentView('uploader');
   };
 
+  const handleViewDetails = (contract: Contract) => {
+    if (contract.status === 'Analyzed' && contract.analysis_data && !('error' in contract.analysis_data)) {
+        setAnalysisResult(contract.analysis_data as DetectAndLabelClausesOutput);
+        // We don't have the original text, so we'll pass an empty string for the chat.
+        // This could be improved by storing the text in the DB.
+        setContractText('');
+        setCurrentView('analysis');
+    } else {
+        toast({
+            variant: 'default',
+            title: 'Analysis Not Available',
+            description: `The analysis for "${contract.name}" is either still processing or resulted in an error.`,
+        });
+    }
+  };
+
+  const handleDelete = async (contractId: string) => {
+    const response = await deleteContractAnalysis(contractId);
+    if (response.success) {
+      toast({
+        title: 'Contract Deleted',
+        description: 'The analysis has been removed from your history.',
+      });
+      if (user) fetchContracts(user.id);
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: response.error || 'Could not delete the contract analysis.',
+      });
+    }
+  };
+  
+  const handleDownloadReport = (contract: Contract) => {
+    if (contract.status === 'Analyzed' && contract.analysis_data && !('error' in contract.analysis_data)) {
+      setSelectedContract(contract);
+      setCurrentView('report');
+    } else {
+      toast({
+          variant: 'default',
+          title: 'Report Not Available',
+          description: `A report cannot be generated for "${contract.name}" as its analysis is incomplete or failed.`,
+      });
+    }
+  };
+
+
   const renderContent = () => {
     switch (currentView) {
+      case 'report':
+        return selectedContract ? (
+           <div>
+            <div className="container mx-auto max-w-7xl px-4 sm:px-6 md:px-8 mb-8">
+              <Button onClick={handleReset} variant="outline">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Dashboard
+              </Button>
+            </div>
+            <AnalysisReport contract={selectedContract} />
+          </div>
+        ) : null;
       case 'analysis':
         return analysisResult ? (
           <div>
@@ -213,6 +278,9 @@ function DashboardPageComponent() {
             onAnalyzeNew={handleAnalyzeNew}
             contracts={contracts || []}
             isLoading={isLoadingContracts}
+            onViewDetails={handleViewDetails}
+            onDelete={handleDelete}
+            onDownloadReport={handleDownloadReport}
           />
         );
     }
@@ -236,10 +304,16 @@ function MainDashboard({
   onAnalyzeNew,
   contracts,
   isLoading,
+  onViewDetails,
+  onDelete,
+  onDownloadReport,
 }: {
   onAnalyzeNew: () => void;
   contracts: Contract[];
   isLoading: boolean;
+  onViewDetails: (contract: Contract) => void;
+  onDelete: (contractId: string) => void;
+  onDownloadReport: (contract: Contract) => void;
 }) {
   const riskDistribution = useMemo(() => {
     const validContracts = contracts.filter(
@@ -298,6 +372,9 @@ function MainDashboard({
             title="Recent Contract Analysis"
             data={contracts}
             isLoading={isLoading}
+            onViewDetails={onViewDetails}
+            onDelete={onDelete}
+            onDownloadReport={onDownloadReport}
           />
         </div>
         <Card className="h-full bg-white/5 border-white/10 glass-card">

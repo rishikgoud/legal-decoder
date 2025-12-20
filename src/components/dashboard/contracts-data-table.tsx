@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {Badge} from '@/components/ui/badge';
-import {MoreHorizontal, Loader2, FileText, AlertTriangle, ShieldCheck, BarChart, Calendar } from 'lucide-react';
+import {MoreHorizontal, FileText, AlertTriangle, ShieldCheck, BarChart, Calendar, Trash2, Eye, Download } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,12 +19,27 @@ import {Button} from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Contract } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useState } from 'react';
+
 
 type ContractsDataTableProps = {
   title: string;
   data: Contract[];
   isLoading: boolean;
+  onViewDetails: (contract: Contract) => void;
+  onDelete: (contractId: string) => void;
+  onDownloadReport: (contract: Contract) => void;
 };
 
 const riskLevelToVariant = (
@@ -55,8 +70,28 @@ export default function ContractsDataTable({
   title,
   data,
   isLoading,
+  onViewDetails,
+  onDelete,
+  onDownloadReport,
 }: ContractsDataTableProps) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<Contract | null>(null);
+
+  const handleDeleteClick = (contract: Contract) => {
+    setContractToDelete(contract);
+    setIsDeleteDialogOpen(true);
+  }
+
+  const confirmDelete = () => {
+    if (contractToDelete) {
+      onDelete(contractToDelete.id);
+    }
+    setIsDeleteDialogOpen(false);
+    setContractToDelete(null);
+  }
+
   return (
+    <>
     <Card className="bg-white/5 border-white/10 glass-card">
       <CardHeader>
         <CardTitle className="text-xl sm:text-2xl font-heading !text-white">{title}</CardTitle>
@@ -86,11 +121,11 @@ export default function ContractsDataTable({
                         <div className="flex items-center gap-1.5">
                             <Badge variant={riskLevelToVariant(contract.riskLevel)} className="flex items-center gap-1.5 py-1 px-2.5 text-xs">
                                 <RiskIcon level={contract.riskLevel} />
-                                {contract.riskLevel} Risk
+                                {contract.riskLevel || contract.status}
                             </Badge>
                         </div>
                          <div className="flex items-center gap-1.5">
-                            <BarChart className="w-4 h-4" /> {contract.clauses} Clauses
+                            <BarChart className="w-4 h-4" /> {contract.clauses || 0} Clauses
                          </div>
                          {contract.highRiskClauses !== undefined && contract.highRiskClauses > 0 && (
                              <div className="flex items-center gap-1.5 text-risk-high">
@@ -113,9 +148,18 @@ export default function ContractsDataTable({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-background border-white/20">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>View Details</DropdownMenuItem>
-                          <DropdownMenuItem>Download Report</DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-400 focus:text-red-400">Delete</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onViewDetails(contract)} className="cursor-pointer">
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onDownloadReport(contract)} className="cursor-pointer">
+                            <Download className="mr-2 h-4 w-4" />
+                            Download Report
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteClick(contract)} className="text-red-400 focus:text-red-400 cursor-pointer">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                   </div>
@@ -133,5 +177,23 @@ export default function ContractsDataTable({
         )}
       </CardContent>
     </Card>
+    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete the
+            analysis for "{contractToDelete?.name}" from our servers.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
