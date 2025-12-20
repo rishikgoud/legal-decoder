@@ -5,25 +5,32 @@ import {type DetectAndLabelClausesOutput} from '@/ai/schemas/detect-and-label-cl
 import {answerContractQuestions} from '@/ai/flows/answer-contract-questions';
 import {compareContracts} from '@/ai/flows/compare-contracts-flow';
 import {type CompareContractsOutput} from '@/ai/schemas/compare-contracts-schema';
-import {supabase} from '@/lib/supabaseClient';
-import {getOverallRisk} from '@/lib/utils';
+import { getOverallRisk } from '@/lib/utils';
+import { createSupabaseServerClient } from '@/lib/supabaseServer';
 
 export async function analyzeContract(
   contractText: string,
   fileName: string,
-  userId: string
 ) {
-  console.log(`Starting analysis for: ${fileName}, User: ${userId}`);
+  const supabase = createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    const errorMsg = 'User not authenticated – cannot create analysis';
+    console.error(errorMsg);
+    return { success: false, error: errorMsg, data: null };
+  }
+  
+  console.log(`Starting analysis for: ${fileName}, User: ${user.id}`);
 
   // 1. Create initial record in DB with 'Analyzing' status
   const {data: initialRecord, error: insertError} = await supabase
     .from('contract_analyses')
     .insert([
       {
-        user_id: userId,
+        user_id: user.id,
         file_name: fileName,
         status: 'Analyzing',
-        // Set default/null values for other fields
         risk_level: 'N/A',
         clauses_count: 0,
         high_risk_clauses_count: 0,
@@ -36,7 +43,7 @@ export async function analyzeContract(
     console.error('Error creating initial analysis record:', insertError);
     return {
       success: false,
-      error: 'Failed to initiate analysis in the database.',
+      error: 'Failed to initiate analysis in the database. ' + insertError.message,
       data: null,
     };
   }

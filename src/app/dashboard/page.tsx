@@ -105,51 +105,45 @@ function DashboardPageComponent() {
   };
 
   const handleAnalyze = async () => {
-    if (!contractText || !user) {
-      if (!user) {
-        toast({
-          variant: 'destructive',
-          title: 'Authentication Error',
-          description: 'You must be signed in to analyze contracts.',
-        });
-      }
-      return;
-    }
-
+    if (!contractText) return;
+    
     setIsLoading(true);
     setCurrentView('analysis'); // Move to analysis view to show loader
 
     // The server action now creates a record immediately, so we don't need to add a placeholder.
     // Instead, we will refetch the list upon completion.
-    const result = await analyzeContract(contractText, contractFileName, user.id);
+    const result = await analyzeContract(contractText, contractFileName);
     
     // Refetch contracts to get the new record and its final status
-    const { data, error: fetchError } = await supabase
-      .from('contract_analyses')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('analyzed_at', { ascending: false });
-    
-    if (fetchError) {
-      console.error('Error refetching contracts:', fetchError);
-    } else {
-        const formattedData = data.map(
-          (item: any): Contract => ({
-            id: item.id,
-            name: item.file_name,
-            status: item.status,
-            riskLevel: item.risk_level,
-            clauses: item.clauses_count,
-            analyzedAt: item.analyzed_at,
-            highRiskClauses: item.high_risk_clauses_count,
-            analysis_data: item.analysis_data,
-          })
-        );
-        setContracts(formattedData);
+    if (user) {
+      const { data, error: fetchError } = await supabase
+        .from('contract_analyses')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('analyzed_at', { ascending: false });
+      
+      if (fetchError) {
+        console.error('Error refetching contracts:', fetchError);
+      } else {
+          const formattedData = data.map(
+            (item: any): Contract => ({
+              id: item.id,
+              name: item.file_name,
+              status: item.status,
+              riskLevel: item.risk_level,
+              clauses: item.clauses_count,
+              analyzedAt: item.analyzed_at,
+              highRiskClauses: item.high_risk_clauses_count,
+              analysis_data: item.analysis_data,
+            })
+          );
+          setContracts(formattedData);
+      }
     }
 
+
     if (result.success && result.data?.analysis_data) {
-        setAnalysisResult(result.data.analysis_data);
+        setAnalysisResult(result.data.analysis_data as DetectAndLabelClausesOutput);
     } else {
         toast({
             variant: 'destructive',
