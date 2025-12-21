@@ -1,23 +1,22 @@
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import type { DetectAndLabelClausesOutput } from '@/ai/schemas/detect-and-label-clauses-schema';
 
 export async function POST(req: Request) {
   try {
-    console.log('🔥 NEGOTIATION API HIT');
-
     // 1. Validate Environment Variables
     const { SUPERVITY_AGENT_ID, SUPERVITY_SKILL_ID, SUPERVITY_API_TOKEN, SUPERVITY_ORG_ID } = process.env;
     if (!SUPERVITY_AGENT_ID || !SUPERVITY_SKILL_ID || !SUPERVITY_API_TOKEN || !SUPERVITY_ORG_ID) {
       console.error('Supervity environment variables are not fully configured.');
       return NextResponse.json({ error: 'Negotiation agent is not configured on the server.' }, { status: 500 });
     }
+    
+    console.log("🔥 NEGOTIATION API HIT");
 
     // 2. Validate incoming request body
     const body = await req.json();
     console.log('📦 Incoming body:', body);
-    const { userId, contractId } = body;
+    const { contractId, userId } = body;
 
     if (!userId || !contractId) {
       return NextResponse.json({ error: 'Missing userId or contractId' }, { status: 400 });
@@ -64,7 +63,7 @@ export async function POST(req: Request) {
     };
 
     // 5. Trigger the Supervity agent
-    const response = await fetch('https://api.supervity.ai/botapi/draftSkills/v2/execute/', {
+    const response = await fetch('https://api.supervity.ai/v2/agents/run', {
       method: 'POST',
       headers: {
         'x-api-token': SUPERVITY_API_TOKEN,
