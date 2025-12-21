@@ -33,9 +33,14 @@ export async function POST(req: Request) {
     }
     console.log("✅ Analysis fetched successfully.");
     
-    if (!contract.analysis_data || typeof contract.analysis_data !== 'object' || ('error' in (contract.analysis_data as object)) || !Array.isArray(contract.analysis_data)) {
-        console.error('❌ Contract analysis data is missing or invalid.');
-        return NextResponse.json({ error: 'Contract analysis data is missing or invalid.' }, { status: 422 });
+    if (
+      !contract.analysis_data ||
+      typeof contract.analysis_data !== 'object' ||
+      !Array.isArray(contract.analysis_data) ||
+      contract.analysis_data.length === 0
+    ) {
+        console.error('❌ Contract analysis data is missing, invalid, or empty.');
+        return NextResponse.json({ error: 'Contract analysis is incomplete or invalid.' }, { status: 422 });
     }
 
     // 2️⃣ BUILD FLAT INPUT (CRITICAL)
@@ -60,7 +65,7 @@ export async function POST(req: Request) {
     const supervityPayload = {
       v2AgentId: SUPERVITY_AGENT_ID,
       v2SkillId: SUPERVITY_SKILL_ID,
-      inputText: JSON.stringify(agentInput),
+      inputText: JSON.stringify(agentInput), // Ensure the entire input is a string for inputText
     };
     
     // 3️⃣ Log payload
