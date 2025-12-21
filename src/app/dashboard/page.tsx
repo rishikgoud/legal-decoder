@@ -103,9 +103,9 @@ function DashboardStats({ contracts }: { contracts: Contract[] }) {
                     <CardTitle className="text-lg font-heading">Risk Distribution</CardTitle>
                     <CardDescription>Overall contract risk profile</CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 -mt-4">
+                <CardContent className="flex-1 -mt-4 flex items-center justify-center">
                   {stats.riskDistribution.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height={150}>
                         <PieChart>
                             <Tooltip
                                 cursor={{ fill: 'hsla(var(--muted)/0.5)'}}
