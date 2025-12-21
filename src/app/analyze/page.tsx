@@ -178,7 +178,7 @@ function AnalyzePageComponent({ user }: { user: User }) {
   };
   
   const confirmAndRunAgent = async () => {
-    if (!analysisId || !processedAnalysis) return;
+    if (!analysisId || !processedAnalysis || !user) return;
   
     if (!isNegotiationApproved) {
       toast({
@@ -191,7 +191,25 @@ function AnalyzePageComponent({ user }: { user: User }) {
   
     setIsAgentRunning(true);
   
-    const payload = { contractId: analysisId };
+    const overallRisk = getOverallRisk(processedAnalysis);
+    let score = 90;
+    if (overallRisk === 'High') score = 30;
+    else if (overallRisk === 'Medium') score = 65;
+
+    const payload = {
+        contractId: analysisId,
+        userId: user.id,
+        contractSummary: {
+            overallRisk: overallRisk,
+            score: score,
+            summaryText: `This contract, "${contractFileName}", has an overall risk of ${overallRisk} with ${processedAnalysis.length} clauses analyzed.`,
+            clauses: processedAnalysis.map(c => ({
+                clauseTitle: c.clauseType,
+                clauseText: c.clauseText,
+                riskLevel: c.riskLevel
+            }))
+        }
+    };
   
     try {
       console.log('🚨 Sending to agent:', payload);

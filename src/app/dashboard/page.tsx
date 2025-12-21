@@ -402,7 +402,26 @@ function DashboardPageComponent() {
   
     setIsAgentRunning(true);
   
-    const payload = { contractId: contractForNegotiation.id };
+    const analysis = contractForNegotiation.analysis_data as Clause[];
+    const overallRisk = getOverallRisk(analysis);
+    let score = 90;
+    if (overallRisk === 'High') score = 30;
+    else if (overallRisk === 'Medium') score = 65;
+
+    const payload = {
+        contractId: contractForNegotiation.id,
+        userId: user.id,
+        contractSummary: {
+            overallRisk: overallRisk,
+            score: score,
+            summaryText: `This contract, "${contractForNegotiation.name}", has an overall risk of ${overallRisk} with ${analysis.length} clauses analyzed.`,
+            clauses: analysis.map(c => ({
+                clauseTitle: c.clauseType,
+                clauseText: c.clauseText,
+                riskLevel: c.riskLevel
+            }))
+        }
+    };
   
     try {
       console.log('🚨 Sending to agent:', payload);
