@@ -5,7 +5,7 @@ import {useState, useMemo, useEffect} from 'react';
 import {useToast} from '@/hooks/use-toast';
 import {DetectAndLabelClausesOutput} from '@/ai/schemas/detect-and-label-clauses-schema';
 import {Button} from '@/components/ui/button';
-import {FilePlus2, Loader2, ArrowLeft, UploadCloud, Bot, ShieldAlert, MessageCircle} from 'lucide-react';
+import {FilePlus2, Loader2, ArrowLeft, UploadCloud, Bot, ShieldAlert, MessageCircle, PieChartIcon} from 'lucide-react';
 import ContractsDataTable from '@/components/dashboard/contracts-data-table';
 import {Header} from '@/components/header';
 import type {Contract} from '@/lib/types';
@@ -14,7 +14,8 @@ import AuthGuard from '@/components/AuthGuard';
 import {User} from '@supabase/supabase-js';
 import * as pdfjsLib from 'pdfjs-dist';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +35,114 @@ import { getTranslatedAnalysis, type TranslateAnalysisOutput } from '@/app/actio
 
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
+
+const PIE_CHART_COLORS = {
+  High: 'hsl(var(--risk-high))',
+  Medium: 'hsl(var(--risk-medium))',
+  Low: 'hsl(var(--risk-low))',
+  'N/A': 'hsl(var(--muted))',
+};
+
+
+function DashboardStats({ contracts }: { contracts: Contract[] }) {
+    const stats = useMemo(() => {
+        const total = contracts.length;
+        const highRisk = contracts.filter(c => c.riskLevel === 'High').length;
+        const mediumRisk = contracts.filter(c => c.riskLevel === 'Medium').length;
+        const lowRisk = contracts.filter(c => c.riskLevel === 'Low').length;
+
+        const riskDistribution = [
+            { name: 'High', value: highRisk },
+            { name: 'Medium', value: mediumRisk },
+            { name: 'Low', value: lowRisk },
+        ].filter(item => item.value > 0);
+
+        return { total, highRisk, mediumRisk, lowRisk, riskDistribution };
+    }, [contracts]);
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-16">
+            {/* Stat Cards */}
+            <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-6">
+                 <Card className="glass-card">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Total Contracts</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-4xl font-bold">{stats.total}</p>
+                        <p className="text-xs text-muted-foreground">Analyzed documents</p>
+                    </CardContent>
+                </Card>
+                 <Card className="glass-card">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">High-Risk</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-4xl font-bold text-red-500">{stats.highRisk}</p>
+                         <p className="text-xs text-muted-foreground">Require immediate attention</p>
+                    </CardContent>
+                </Card>
+                 <Card className="glass-card">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Medium/Low Risk</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <p className="text-4xl font-bold">
+                            <span className="text-yellow-500">{stats.mediumRisk}</span>
+                            <span className="text-muted-foreground mx-2">/</span>
+                            <span className="text-green-500">{stats.lowRisk}</span>
+                         </p>
+                         <p className="text-xs text-muted-foreground">To be reviewed</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Pie Chart */}
+            <Card className="glass-card flex flex-col">
+                <CardHeader>
+                    <CardTitle className="text-lg font-heading">Risk Distribution</CardTitle>
+                    <CardDescription>Overall contract risk profile</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 -mt-4">
+                  {stats.riskDistribution.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Tooltip
+                                cursor={{ fill: 'hsla(var(--muted)/0.5)'}}
+                                contentStyle={{
+                                    background: 'hsl(var(--background))',
+                                    borderColor: 'hsl(var(--border))',
+                                    borderRadius: 'var(--radius)',
+                                }}
+                            />
+                            <Pie
+                                data={stats.riskDistribution}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                outerRadius={60}
+                                fill="#8884d8"
+                                dataKey="value"
+                            >
+                                {stats.riskDistribution.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[entry.name as keyof typeof PIE_CHART_COLORS]} />
+                                ))}
+                            </Pie>
+                            <Legend formatter={(value) => <span className="text-white/80">{value}</span>} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                        <PieChartIcon className="h-8 w-8 mb-2" />
+                        <p>No contract data to display.</p>
+                    </div>
+                  )}
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
 
 function DashboardPageComponent() {
   const [analysisResult, setAnalysisResult] =
@@ -456,7 +565,9 @@ function MainDashboard({
             <p className="mt-3 text-lg text-muted-foreground">Review and manage your recent contract analyses.</p>
         </div>
 
-        <div className="mt-16">
+        <DashboardStats contracts={contracts} />
+
+        <div className="mt-8">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-white">Recent Analyses</h2>
                 <Button variant="link" className="text-primary">View All History</Button>
