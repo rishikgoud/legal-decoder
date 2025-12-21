@@ -414,7 +414,7 @@ function DashboardPageComponent() {
         const result = await response.json();
         
         if (!response.ok) {
-          throw new Error(result.error || 'Agent execution failed');
+          throw new Error(result.error || result.details || 'Agent execution failed');
         }
 
         toast({
