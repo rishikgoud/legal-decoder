@@ -1,10 +1,8 @@
-
-import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(req: Request) {
   try {
-    // 1. Validate Environment Variables
     const { SUPERVITY_AGENT_ID, SUPERVITY_SKILL_ID, SUPERVITY_API_TOKEN, SUPERVITY_ORG_ID } = process.env;
     if (!SUPERVITY_AGENT_ID || !SUPERVITY_SKILL_ID || !SUPERVITY_API_TOKEN || !SUPERVITY_ORG_ID) {
       console.error('Supervity environment variables are not fully configured.');
@@ -13,34 +11,31 @@ export async function POST(req: Request) {
     
     console.log("🔥 NEGOTIATION API HIT");
 
-    // 2. Validate incoming request body
-    const body = await req.json();
-    console.log('📦 Incoming body:', body);
-    const { contractId, userId } = body;
+    const { contractId, userId } = await req.json();
+    console.log("📦 Incoming body:", { contractId, userId });
 
     if (!userId || !contractId) {
-      return NextResponse.json({ error: 'Missing userId or contractId' }, { status: 400 });
+      return NextResponse.json({ error: "Missing userId or contractId" }, { status: 400 });
     }
 
-    // 3. Fetch the full analysis data from the database
+    // 1. Fetch analysis from DB
     const { data: contract, error: contractError } = await supabaseAdmin
-      .from('contract_analyses')
-      .select('*')
-      .eq('id', contractId)
-      .eq('user_id', userId)
+      .from("contract_analyses")
+      .select("*")
+      .eq("id", contractId)
+      .eq("user_id", userId)
       .single();
 
     if (contractError || !contract) {
-      console.error('Contract fetch error:', contractError);
-      return NextResponse.json({ error: 'Unauthorized or contract not found' }, { status: 403 });
+        console.error('Contract fetch error:', contractError);
+        return NextResponse.json({ error: 'Unauthorized or contract not found' }, { status: 403 });
     }
-
-    // Ensure analysis_data is valid and not an error object
+    
     if (!contract.analysis_data || typeof contract.analysis_data !== 'object' || 'error' in contract.analysis_data) {
-      return NextResponse.json({ error: 'Contract analysis data is missing or invalid.' }, { status: 400 });
+        return NextResponse.json({ error: 'Contract analysis data is missing or invalid.' }, { status: 400 });
     }
 
-    // 4. Construct the rich input object for the agent.
+    // 2. Build the rich input object for the agent
     const agentInput = {
       contract: {
         id: contractId,
@@ -53,16 +48,15 @@ export async function POST(req: Request) {
       userApproval: true,
     };
     
-    // CRITICAL: Log the payload before sending
     console.log("🚀 AGENT INPUT PAYLOAD:", JSON.stringify(agentInput, null, 2));
 
     const supervityPayload = {
       v2AgentId: SUPERVITY_AGENT_ID,
       v2SkillId: SUPERVITY_SKILL_ID,
-      inputText: JSON.stringify(agentInput), // Pass the structured object as a string
+      inputText: JSON.stringify(agentInput),
     };
-
-    // 5. Trigger the Supervity agent
+    
+    // 3. Trigger Supervity workflow
     const response = await fetch('https://api.supervity.ai/v2/agents/run', {
       method: 'POST',
       headers: {
@@ -72,7 +66,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify(supervityPayload),
     });
-    
+
     const result = await response.json();
 
     if (!response.ok) {
@@ -80,7 +74,7 @@ export async function POST(req: Request) {
       throw new Error(`Supervity API failed with status: ${response.status}. Details: ${result.error?.message || 'Unknown error'}`);
     }
 
-    // 6. Log the successful trigger action to the database for auditing.
+    // 4. Log successful trigger
     await supabaseAdmin.from('negotiation_actions').insert({
       contract_id: contractId,
       user_id: userId,
@@ -88,13 +82,13 @@ export async function POST(req: Request) {
       supervity_run_id: result.runId || null,
     });
 
+
     return NextResponse.json({ success: true, data: result });
 
-  } catch (error: any) {
-    console.error('❌ Negotiation API failed:', error.message);
-    
+  } catch (err: any) {
+    console.error("❌ Negotiation API failed:", err.message);
     return NextResponse.json(
-      { error: 'Failed to execute negotiation agent.', details: error.message },
+      { error: "Failed to execute negotiation agent.", details: err.message },
       { status: 500 }
     );
   }
