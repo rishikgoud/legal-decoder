@@ -12,6 +12,8 @@ export async function POST(req: Request) {
     
     // 2. Validate Incoming Payload
     const { contractId, userId, contractSummary } = await req.json();
+    console.log("🟡 Negotiation API hit for contractId:", contractId);
+
 
     if (!contractId || !userId) {
       return NextResponse.json({ error: "Missing contractId or userId" }, { status: 400 });
