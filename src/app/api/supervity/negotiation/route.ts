@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -19,6 +20,7 @@ export async function POST(req: Request) {
     }
 
     // 1. Fetch analysis from DB
+    console.log(`🔎 Fetching analysis for contractId: ${contractId}`);
     const { data: contract, error: contractError } = await supabaseAdmin
       .from("contract_analyses")
       .select("*")
@@ -27,11 +29,13 @@ export async function POST(req: Request) {
       .single();
 
     if (contractError || !contract) {
-        console.error('Contract fetch error:', contractError);
+        console.error('❌ Contract fetch error:', contractError);
         return NextResponse.json({ error: 'Unauthorized or contract not found' }, { status: 403 });
     }
+    console.log("✅ Analysis fetched successfully.");
     
-    if (!contract.analysis_data || typeof contract.analysis_data !== 'object' || 'error' in contract.analysis_data) {
+    if (!contract.analysis_data || typeof contract.analysis_data !== 'object' || ('error' in (contract.analysis_data as object))) {
+        console.error('❌ Contract analysis data is missing or invalid.');
         return NextResponse.json({ error: 'Contract analysis data is missing or invalid.' }, { status: 400 });
     }
 
@@ -57,6 +61,7 @@ export async function POST(req: Request) {
     };
     
     // 3. Trigger Supervity workflow
+    console.log("📡 Triggering Supervity workflow...");
     const response = await fetch('https://api.supervity.ai/v2/agents/run', {
       method: 'POST',
       headers: {
@@ -70,9 +75,10 @@ export async function POST(req: Request) {
     const result = await response.json();
 
     if (!response.ok) {
-      console.error('Supervity API Error Response:', result);
+      console.error('❌ Supervity API Error Response:', result);
       throw new Error(`Supervity API failed with status: ${response.status}. Details: ${result.error?.message || 'Unknown error'}`);
     }
+    console.log("✅ Supervity workflow triggered successfully. Run ID:", result.runId);
 
     // 4. Log successful trigger
     await supabaseAdmin.from('negotiation_actions').insert({
@@ -81,12 +87,13 @@ export async function POST(req: Request) {
       status: 'running',
       supervity_run_id: result.runId || null,
     });
+    console.log("📝 Logged negotiation action to database.");
 
 
     return NextResponse.json({ success: true, data: result });
 
   } catch (err: any) {
-    console.error("❌ Negotiation API failed:", err.message);
+    console.error("❌ Negotiation API failed:", err.stack);
     return NextResponse.json(
       { error: "Failed to execute negotiation agent.", details: err.message },
       { status: 500 }
