@@ -8,9 +8,8 @@ import { Header } from '@/components/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import dynamic from 'next/dynamic';
 import Rellax from 'rellax';
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Preloader from '@/components/preloader';
+import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import img from '../../public/stop.png';
 
@@ -105,8 +104,6 @@ const features = [
 
 
 export default function LandingPage() {
-    const [isLoading, setIsLoading] = useState(true);
-
     useEffect(() => {
     if (typeof window !== 'undefined' && document.querySelector('.rellax')) {
       new Rellax('.rellax', {
@@ -146,11 +143,6 @@ export default function LandingPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col text-gray-100 overflow-x-hidden bg-gradient-to-br from-[#0B0C10] to-[#1A1A2E]">
-        <AnimatePresence>
-            {isLoading && <Preloader onComplete={() => setIsLoading(false)} />}
-        </AnimatePresence>
-        
-        {!isLoading && (
         <div className="w-full h-full">
             <Header />
 
@@ -429,7 +421,8 @@ export default function LandingPage() {
                 </div>
             </footer>
         </div>
-        )}
     </div>
   );
 }
+
+    
