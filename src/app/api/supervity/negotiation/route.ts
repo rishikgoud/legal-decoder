@@ -62,7 +62,7 @@ export async function POST(req: Request) {
   };
 
   try {
-    const response = await fetch('https://api.supervity.ai/v2/agents/run', { // Using the v2 run endpoint
+    const response = await fetch('https://api.supervity.ai/v2/agents/run', { // Using the correct v2 run endpoint
       method: 'POST',
       headers: {
         'x-api-token': SUPERVITY_API_TOKEN,
