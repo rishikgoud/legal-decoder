@@ -441,5 +441,3 @@ export default function AnalyzePage() {
     </AuthGuard>
   );
 }
-
-    
