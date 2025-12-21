@@ -31,8 +31,8 @@ export async function POST(req: Request) {
         .single();
 
     if (dbError) {
-        console.error('❌ Supabase error fetching emails:', dbError);
-        // We can still proceed without emails, but we log the error.
+        console.error('❌ Supabase error fetching emails for contract:', contractId, dbError);
+        // We can still proceed without emails, but we log the error. This is a fallback.
     }
 
     // 3. Construct the explicit input object for the agent
@@ -50,18 +50,18 @@ export async function POST(req: Request) {
       }))
     };
 
-    // 4. Construct the FormData payload
+    // 4. Construct the FormData payload for Supervity v2 API
     const formData = new FormData();
     formData.append('v2AgentId', process.env.SUPERVITY_AGENT_ID!);
     formData.append('v2SkillId', process.env.SUPERVITY_SKILL_ID!);
 
-    // Convert the JSON input object to a buffer and append as a file
+    // Convert the JSON input object to a buffer and append as a file named 'inputpayload.txt'
     const inputBuffer = Buffer.from(JSON.stringify(agentInput), 'utf-8');
     const blob = new Blob([inputBuffer], { type: 'text/plain' });
     formData.append('inputFiles', blob, 'inputpayload.txt');
 
-    console.log("🚀 Sending FormData to Supervity with inputpayload.txt...");
-    console.log("📋 Payload Content:", JSON.stringify(agentInput, null, 2));
+    console.log("🚀 Sending FormData to Supervity...");
+    console.log("📋 Payload Content to be sent in inputpayload.txt:", JSON.stringify(agentInput, null, 2));
 
 
     // 5. Call the Supervity API
