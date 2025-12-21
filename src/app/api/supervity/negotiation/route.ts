@@ -4,10 +4,10 @@ import {supabaseAdmin} from '@/lib/supabaseAdmin';
 import type {DetectAndLabelClausesOutput} from '@/ai/schemas/detect-and-label-clauses-schema';
 
 export async function POST(req: Request) {
-  const {userId, contractId, contractText, analysisData} = await req.json();
+  const {userId, contractId } = await req.json();
 
-  if (!userId || !contractId || !contractText || !analysisData) {
-    return NextResponse.json({error: 'Missing required parameters'}, {status: 400});
+  if (!userId || !contractId) {
+    return NextResponse.json({error: 'Missing userId or contractId'}, {status: 400});
   }
 
   // Verify all required environment variables are present.
@@ -17,33 +17,52 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Negotiation agent is not configured on the server." }, { status: 500 });
   }
 
-  // Optional: Verify user owns the contract
+  // 1. Fetch the full analysis data from the database
   const {data: contract, error: contractError} = await supabaseAdmin
     .from('contract_analyses')
-    .select('user_id')
+    .select('*')
     .eq('id', contractId)
+    .eq('user_id', userId)
     .single();
 
-  if (contractError || !contract || contract.user_id !== userId) {
+  if (contractError || !contract) {
+    console.error("Contract fetch error:", contractError);
     return NextResponse.json({error: 'Unauthorized or contract not found'}, {status: 403});
   }
 
-  // **THE FIX**: Construct a rich input object for the agent, then stringify it.
+  // Ensure analysis_data is valid
+  if (!contract.analysis_data || typeof contract.analysis_data !== 'object' || 'error' in contract.analysis_data) {
+     return NextResponse.json({error: 'Contract analysis data is missing or invalid.'}, {status: 400});
+  }
+  
+  // Reconstruct the full text from the clause data if not stored separately
+  const contractText = (contract.analysis_data as DetectAndLabelClausesOutput).map(c => c.clauseText).join('\n\n');
+
+  // 2. Construct a rich input object for the agent.
   const agentInput = {
-    contractId,
-    contractText,
-    analysis: analysisData,
+    contract: {
+      id: contractId,
+      title: contract.file_name,
+      text: contractText,
+    },
+    analysis: {
+      riskLevel: contract.risk_level,
+      clauses: contract.analysis_data
+    },
+    userApproval: true,
   };
+  
+  console.log("🚀 AGENT INPUT PAYLOAD:", JSON.stringify(agentInput, null, 2));
 
   const supervityPayload = {
     v2AgentId: SUPERVITY_AGENT_ID,
     v2SkillId: SUPERVITY_SKILL_ID,
-    // Supervity expects `inputText` to be a single string. We stringify the JSON object.
-    inputText: JSON.stringify(agentInput),
+    // Supervity expects `input` to be a structured object.
+    input: agentInput,
   };
 
   try {
-    const response = await fetch('https://api.supervity.ai/botapi/draftSkills/v2/execute/', {
+    const response = await fetch('https://api.supervity.ai/v2/agents/run', { // Using the v2 run endpoint
       method: 'POST',
       headers: {
         'x-api-token': SUPERVITY_API_TOKEN,
@@ -62,11 +81,10 @@ export async function POST(req: Request) {
     const result = await response.json();
     
     // Log the successful trigger action to the database for auditing.
-    // A more robust implementation would use webhooks from Supervity to update the status upon completion.
     await supabaseAdmin.from('negotiation_actions').insert({
         contract_id: contractId,
         user_id: userId,
-        status: 'running', // The agent has been triggered and is now running.
+        status: 'running',
         supervity_run_id: result.runId || null,
     });
 

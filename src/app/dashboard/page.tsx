@@ -402,18 +402,12 @@ function DashboardPageComponent() {
     setIsAgentRunning(true);
     
     try {
-        const fullText = (contractForNegotiation.analysis_data as DetectAndLabelClausesOutput)
-          .map(c => c.clauseText)
-          .join('\n\n');
-
         const response = await fetch('/api/supervity/negotiation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contractId: contractForNegotiation.id,
-            userId: user.id,
-            analysisData: contractForNegotiation.analysis_data,
-            contractText: fullText
+            userId: user.id
           }),
         });
 
