@@ -1,10 +1,9 @@
 
 import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(req: Request) {
   try {
-    const { contractId, userId, contractSummary } = await req.json();
-
     // 1. Validate Environment Variables
     if (!process.env.SUPERVITY_API_KEY || !process.env.SUPERVITY_ORG_ID || !process.env.SUPERVITY_AGENT_ID || !process.env.SUPERVITY_SKILL_ID) {
       console.error("❌ Missing Supervity environment variables");
@@ -12,6 +11,8 @@ export async function POST(req: Request) {
     }
     
     // 2. Validate Incoming Payload
+    const { contractId, userId, contractSummary } = await req.json();
+
     if (!contractId || !userId) {
       return NextResponse.json({ error: "Missing contractId or userId" }, { status: 400 });
     }
@@ -34,14 +35,17 @@ export async function POST(req: Request) {
       }))
     };
 
-    // 4. Construct the final Supervity payload, stringifying the agent input
-    const supervityPayload = {
-      v2AgentId: process.env.SUPERVITY_AGENT_ID,
-      v2SkillId: process.env.SUPERVITY_SKILL_ID,
-      inputText: JSON.stringify(agentInput), // CRITICAL: Input must be a stringified JSON
-    };
+    // 4. Construct the FormData payload
+    const formData = new FormData();
+    formData.append('v2AgentId', process.env.SUPERVITY_AGENT_ID!);
+    formData.append('v2SkillId', process.env.SUPERVITY_SKILL_ID!);
 
-    console.log("🚀 Sending to Supervity:", JSON.stringify(supervityPayload, null, 2));
+    // Convert the JSON input object to a buffer and append as a file
+    const inputBuffer = Buffer.from(JSON.stringify(agentInput), 'utf-8');
+    const blob = new Blob([inputBuffer], { type: 'text/plain' });
+    formData.append('inputFiles', blob, 'inputpayload.txt');
+
+    console.log("🚀 Sending FormData to Supervity with inputpayload.txt...");
 
     // 5. Call the Supervity API
     const response = await fetch("https://api.supervity.ai/botapi/draftSkills/v2/execute/", {
@@ -49,9 +53,9 @@ export async function POST(req: Request) {
       headers: {
         'x-api-token': process.env.SUPERVITY_API_KEY!,
         'x-api-org': process.env.SUPERVITY_ORG_ID!,
-        'Content-Type': 'application/json',
+        // Do NOT set Content-Type, fetch does it automatically for FormData
       },
-      body: JSON.stringify(supervityPayload),
+      body: formData,
     });
 
     const result = await response.json();
