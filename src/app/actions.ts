@@ -2,37 +2,10 @@
 'use server';
 
 import {detectAndLabelClauses} from '@/ai/flows/detect-and-label-clauses';
-import {answerContractQuestions, type AnswerContractQuestionsOutput} from '@/ai/flows/answer-contract-questions';
 import {compareContracts} from '@/ai/flows/compare-contracts-flow';
 import type { SelectedContract, MultiCompareContractsOutput } from '@/ai/schemas/compare-contracts-schema';
 import { translateAnalysis, type TranslateAnalysisInput, type TranslateAnalysisOutput } from '@/ai/flows/translate-analysis-flow';
 
-
-export async function askQuestion(contractText: string, question: string): Promise<{
-    success: boolean;
-    data: AnswerContractQuestionsOutput | null;
-    error: string | null;
-}> {
-  if (!contractText || !question) {
-    return {
-      success: false,
-      error: 'Missing contract text or question.',
-      data: null,
-    };
-  }
-
-  try {
-    const result = await answerContractQuestions({contractText, question});
-    return {success: true, data: result, error: null};
-  } catch (error) {
-    console.error('Error asking question:', error);
-    return {
-      success: false,
-      error: 'Failed to get an answer. The AI model may be unavailable.',
-      data: null,
-    };
-  }
-}
 
 export async function compareContractsMulti(
   contracts: SelectedContract[]

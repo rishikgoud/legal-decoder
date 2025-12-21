@@ -1,8 +1,6 @@
-
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { askQuestion } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Send, User, Bot, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import type { AnswerContractQuestionsOutput } from '@/ai/flows/answer-contract-questions';
 
 type Message = {
   id: number;
@@ -45,7 +44,18 @@ export default function Chat({ contractText }: ChatProps) {
     setIsLoading(true);
 
     try {
-      const result = await askQuestion(contractText, input);
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractText, question: input }),
+      });
+      
+      const result: { success: boolean; data: AnswerContractQuestionsOutput | null, error: string | null } = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || "An error occurred");
+      }
+
       if (result.success && result.data) {
         const aiMessage: Message = {
           id: Date.now() + 1,
@@ -56,19 +66,13 @@ export default function Chat({ contractText }: ChatProps) {
         };
         setMessages((prev) => [...prev, aiMessage]);
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: result.error || 'Could not get a response.',
-        });
-        // Remove the user's message if the AI fails to respond
-        setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+        throw new Error(result.error || 'Could not get a response.');
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'An Unexpected Error Occurred',
-        description: 'Please try again.',
+        description: error.message || 'Please try again.',
       });
        setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
     } finally {
