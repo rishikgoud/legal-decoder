@@ -148,21 +148,26 @@ export default function LandingPage() {
 
             <main className="flex-1 z-10">
                 {/* Hero Section */}
-                <section className="relative w-full h-[calc(100vh-80px)] flex items-center justify-center overflow-hidden text-center">
+                <section className="relative w-full h-[calc(100vh-80px)] overflow-hidden">
+                    {/* Background Video */}
                     <video
+                        className="absolute inset-0 w-full h-full object-cover -z-10"
                         autoPlay
                         loop
                         muted
                         playsInline
-                        className="absolute top-0 left-0 w-full h-full object-cover -z-10 grayscale"
-                        src="/illegalvideo.mp4" 
-                        type="video/mp4"
+                        preload="auto"
                     >
+                        <source src="/illegalvideo.mp4" type="video/mp4" />
                         Your browser does not support the video tag.
                     </video>
+
+                    {/* Optional dark overlay */}
                     <div className="absolute inset-0 bg-black/60"></div>
-                    <div className="container relative z-10 mx-auto max-w-4xl px-6 sm:px-8 md:px-4">
-                        <div className="w-full">
+
+                    {/* Hero Content */}
+                    <div className="relative z-10 flex h-full items-center justify-center text-center px-6">
+                        <div className="max-w-4xl">
                             <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl font-heading !text-white">
                                 Transform Complex Contracts into Clear Insights — Instantly.
                             </h1>
