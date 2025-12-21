@@ -1,4 +1,3 @@
-
 'use client';
 
 import { ArrowRight, BarChart, Bot, FileText, UploadCloud, Users, Zap, Scale, ShieldCheck, Clock, Eye, Briefcase } from 'lucide-react';
