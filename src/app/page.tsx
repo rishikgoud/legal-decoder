@@ -14,10 +14,6 @@ import Preloader from '@/components/preloader';
 import Image from 'next/image';
 import img from '../../public/stop.png';
 
-const VantaBackground = dynamic(() => import('@/components/vanta-background'), {
-  ssr: false,
-  loading: () => <div className="absolute inset-0 bg-gradient-to-br from-[#0B0C10] to-[#1A1A2E] -z-20" />,
-});
 
 const LottieAnimation = dynamic(() => import('@/components/lottie-animation'), {
   ssr: false,
@@ -149,7 +145,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col text-gray-100 overflow-x-hidden">
+    <div className="flex min-h-screen w-full flex-col text-gray-100 overflow-x-hidden bg-gradient-to-br from-[#0B0C10] to-[#1A1A2E]">
         <AnimatePresence>
             {isLoading && <Preloader onComplete={() => setIsLoading(false)} />}
         </AnimatePresence>
@@ -163,37 +159,49 @@ export default function LandingPage() {
           transition={{ duration: 0.5 }}
           className="w-full h-full"
         >
-            <VantaBackground />
             <Header />
 
             <main className="flex-1 z-10">
                 {/* Hero Section */}
-                <section className="container relative mx-auto flex h-[calc(100vh-80px)] max-w-7xl flex-col items-center justify-center px-6 sm:px-8 md:px-4">
-                    <div className="grid md:grid-cols-2 gap-8 items-center">
-                    <div className="w-full text-center md:text-left">
-                        <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl font-heading !text-white">
-                         Transform Complex Contracts into Clear Insights — Instantly.
-                        </h1>
-                        <p className="mx-auto mt-6 max-w-3xl text-md text-[#CCCCCC] sm:text-lg md:text-xl">
-                          AI-powered legal analysis that detects clauses, evaluates risks, and explains everything in plain English.
-                        </p>
-                        <div className="mt-8 flex flex-col sm:flex-row justify-center md:justify-start gap-4">
-                        <Button asChild size="lg" className="group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-md bg-gradient-to-r from-primary to-accent font-medium text-white transition-all duration-300 ease-in-out hover:from-accent hover:to-primary">
-                            <Link href="/dashboard">
-                            <span className="relative z-10">Analyze a Contract</span>
-                            <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-                            </Link>
-                        </Button>
-                        <Button asChild size="lg" variant="outline" className="h-12 border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white backdrop-blur-sm">
-                            <Link href="#features">Learn More</Link>
-                        </Button>
+                <section className="relative w-full h-[calc(100vh-80px)] flex items-center justify-center overflow-hidden">
+                     <video
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="absolute top-0 left-0 w-full h-full object-cover -z-10 grayscale"
+                    >
+                        <source src="/demo-video.mp4" type="video/mp4" />
+                        Your browser does not support the video tag.
+                    </video>
+                    <div className="absolute inset-0 bg-black/60"></div>
+                    <div className="container relative mx-auto max-w-7xl px-6 sm:px-8 md:px-4">
+                        <div className="grid md:grid-cols-2 gap-8 items-center">
+                        <div className="w-full text-center md:text-left">
+                            <h1 className="text-4xl font-extrabold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl font-heading !text-white">
+                            Transform Complex Contracts into Clear Insights — Instantly.
+                            </h1>
+                            <p className="mx-auto mt-6 max-w-3xl text-md text-[#CCCCCC] sm:text-lg md:text-xl">
+                            AI-powered legal analysis that detects clauses, evaluates risks, and explains everything in plain English.
+                            </p>
+                            <div className="mt-8 flex flex-col sm:flex-row justify-center md:justify-start gap-4">
+                            <Button asChild size="lg" className="group relative inline-flex h-12 items-center justify-center overflow-hidden rounded-md bg-gradient-to-r from-primary to-accent font-medium text-white transition-all duration-300 ease-in-out hover:from-accent hover:to-primary">
+                                <Link href="/dashboard">
+                                <span className="relative z-10">Analyze a Contract</span>
+                                <ArrowRight className="ml-2 h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+                                </Link>
+                            </Button>
+                            <Button asChild size="lg" variant="outline" className="h-12 border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white backdrop-blur-sm">
+                                <Link href="#features">Learn More</Link>
+                            </Button>
+                            </div>
                         </div>
-                    </div>
-                    <div className="w-full h-full md:flex items-center justify-center mt-8 md:mt-0 hidden">
-                        <div className="w-full h-full max-w-lg max-h-lg rellax">
-                            <LottieAnimation />
+                        <div className="w-full h-full md:flex items-center justify-center mt-8 md:mt-0 hidden">
+                            <div className="w-full h-full max-w-lg max-h-lg rellax">
+                                <LottieAnimation />
+                            </div>
                         </div>
-                    </div>
+                        </div>
                     </div>
                 </section>
 
