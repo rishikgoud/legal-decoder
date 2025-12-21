@@ -170,7 +170,7 @@ export default function LandingPage() {
                         muted
                         playsInline
                         className="absolute top-0 left-0 w-full h-full object-cover -z-10 grayscale"
-                        src="/demo-video.mp4"
+                        src="/demo_video.mp4"
                     >
                         Your browser does not support the video tag.
                     </video>
