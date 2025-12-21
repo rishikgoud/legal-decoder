@@ -21,6 +21,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing or incomplete contract summary data" }, { status: 400 });
     }
     
+    // Fetch the contract to get extracted emails
+    const { data: contractData, error: dbError } = await supabaseAdmin
+        .from('contract_analyses')
+        .select('extracted_emails')
+        .eq('id', contractId)
+        .single();
+
+    if (dbError) {
+        console.error('❌ Supabase error fetching emails:', dbError);
+        // We can still proceed without emails, but we log the error.
+    }
+
     // 3. Construct the explicit input object for the agent
     const agentInput = {
       contract_id: contractId,
@@ -28,6 +40,7 @@ export async function POST(req: Request) {
       contract_summary: contractSummary.summaryText,
       overall_risk: contractSummary.overallRisk,
       risk_score: contractSummary.score,
+      extractedEmails: contractData?.extracted_emails || [], // Include extracted emails
       clauses: contractSummary.clauses.map((c: any) => ({
         title: c.clauseTitle,
         text: c.clauseText,
@@ -46,6 +59,8 @@ export async function POST(req: Request) {
     formData.append('inputFiles', blob, 'inputpayload.txt');
 
     console.log("🚀 Sending FormData to Supervity with inputpayload.txt...");
+    console.log("📋 Payload Content:", JSON.stringify(agentInput, null, 2));
+
 
     // 5. Call the Supervity API
     const response = await fetch("https://api.supervity.ai/botapi/draftSkills/v2/execute/", {
