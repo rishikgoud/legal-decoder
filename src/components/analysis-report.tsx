@@ -1,7 +1,7 @@
 
 'use client';
 
-import { DetectAndLabelClausesOutput } from '@/ai/schemas/detect-and-label-clauses-schema';
+import { Clause } from '@/lib/types';
 import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,7 +38,7 @@ import { getOverallRisk } from '@/lib/utils';
 
 
 type AnalysisReportProps = {
-  analysisResult: DetectAndLabelClausesOutput;
+  analysisResult: Clause[];
   contractName: string;
   onStartNew: () => void;
   analysisId: string | null;

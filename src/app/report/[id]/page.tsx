@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { getOverallRisk } from "@/lib/utils";
-import type { DetectAndLabelClausesOutput } from "@/ai/schemas/detect-and-label-clauses-schema";
+import type { Clause } from "@/lib/types";
 import PrintButton from "@/components/PrintButton";
 
 const riskLevelToVariant = (
@@ -27,7 +27,7 @@ export default async function ReportPage({ params }: { params: { id: string } })
     return notFound();
   }
   
-  const analysisData = data.analysis_data as DetectAndLabelClausesOutput | undefined;
+  const analysisData = data.analysis_data as Clause[] | undefined;
   
   const overallRisk = getOverallRisk(analysisData || []);
 

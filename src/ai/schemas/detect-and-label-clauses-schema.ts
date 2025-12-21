@@ -26,7 +26,11 @@ export const ClauseSchema = z.object({
   recommendation: z.string().describe('Suggested mitigation steps or recommendations for the user.'),
 });
 
-export const DetectAndLabelClausesOutputSchema = z.array(ClauseSchema);
+export const DetectAndLabelClausesOutputSchema = z.object({
+    clauses: z.array(ClauseSchema),
+    extractedEmails: z.array(z.string().email()).describe('An array of any email addresses found in the contract text.'),
+});
+
 
 export type DetectAndLabelClausesOutput = z.infer<
   typeof DetectAndLabelClausesOutputSchema

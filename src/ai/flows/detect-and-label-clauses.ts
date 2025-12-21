@@ -26,15 +26,16 @@ const prompt = ai.definePrompt({
   output: {schema: DetectAndLabelClausesOutputSchema},
   prompt: `You are a professional legal assistant AI specializing in contract risk analysis.
 
-Given a contract text, you must perform the following steps for each clause:
-1.  Identify individual clauses within the contract.
-2.  For each clause, determine its type (e.g., Confidentiality, Liability, Termination, Jurisdiction).
-3.  Summarize the clause in plain English (2–3 lines).
-4.  Assess its potential risk and assign a risk level (Low, Medium, High).
-5.  Provide a clear and concise reason for the assigned risk rating.
-6.  Suggest actionable mitigation steps or recommendations for high or medium-risk clauses.
+Given a contract text, you must perform the following steps:
+1.  **Detect Clauses**: Identify individual clauses within the contract. For each clause:
+    - Determine its type (e.g., Confidentiality, Liability, Termination, Jurisdiction).
+    - Summarize the clause in plain English (2–3 lines).
+    - Assess its potential risk and assign a risk level (Low, Medium, High).
+    - Provide a clear and concise reason for the assigned risk rating.
+    - Suggest actionable mitigation steps or recommendations for high or medium-risk clauses.
+2.  **Extract Emails**: Scan the entire contract text and extract any email addresses you find. Return them in an array of strings.
 
-Return the output strictly as a JSON array of clause objects, where each object contains the identified clause, its type, a summary, risk level, risk reason, and recommendation.
+Return the final output strictly as a JSON object that adheres to the output schema, containing both the 'clauses' array and the 'extractedEmails' array.
 
 Analyze the following contract text:
 

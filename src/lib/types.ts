@@ -1,5 +1,7 @@
 import { DetectAndLabelClausesOutput } from "@/ai/schemas/detect-and-label-clauses-schema";
 
+export type Clause = DetectAndLabelClausesOutput['clauses'][0];
+
 export type Contract = {
   id: string;
   name: string;
@@ -9,7 +11,8 @@ export type Contract = {
   analyzedAt: string;
   userId?: string;
   highRiskClauses?: number;
-  analysis_data?: DetectAndLabelClausesOutput | { error: string };
+  analysis_data?: Clause[] | { error: string };
+  extracted_emails?: string[];
 };
 
 export type NegotiationAction = {
@@ -21,5 +24,3 @@ export type NegotiationAction = {
   executed_at: string;
   supervity_run_id?: string;
 };
-
-    

@@ -3,7 +3,7 @@
 
 import {useState, useMemo, useEffect} from 'react';
 import {useToast} from '@/hooks/use-toast';
-import {DetectAndLabelClausesOutput} from '@/ai/schemas/detect-and-label-clauses-schema';
+import {Clause} from '@/lib/types';
 import {Button} from '@/components/ui/button';
 import {FilePlus2, Loader2, ArrowLeft, UploadCloud, Bot, ShieldAlert, MessageCircle, PieChartIcon} from 'lucide-react';
 import ContractsDataTable from '@/components/dashboard/contracts-data-table';
@@ -147,7 +147,7 @@ function DashboardStats({ contracts }: { contracts: Contract[] }) {
 
 function DashboardPageComponent() {
   const [analysisResult, setAnalysisResult] =
-    useState<DetectAndLabelClausesOutput | null>(null);
+    useState<Clause[] | null>(null);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const {toast} = useToast();
@@ -312,12 +312,12 @@ function DashboardPageComponent() {
 
   const handleViewDetails = (contract: Contract) => {
     if (contract.status === 'Analyzed' && contract.analysis_data && !('error' in contract.analysis_data)) {
-        setAnalysisResult(contract.analysis_data as DetectAndLabelClausesOutput);
+        setAnalysisResult(contract.analysis_data as Clause[]);
         setAnalysisId(contract.id);
         setContractFileName(contract.name);
         
         // Extract original contract text from analysis data
-        const fullText = (contract.analysis_data as DetectAndLabelClausesOutput)
+        const fullText = (contract.analysis_data as Clause[])
           .map(c => c.clauseText)
           .join('\n\n');
         setContractText(fullText);
@@ -402,23 +402,7 @@ function DashboardPageComponent() {
   
     setIsAgentRunning(true);
   
-    const analysisData = contractForNegotiation.analysis_data as DetectAndLabelClausesOutput;
-    const risk = getOverallRisk(analysisData);
-    
-    const payload = {
-        contractId: contractForNegotiation.id,
-        userId: user.id,
-        contractSummary: {
-            overallRisk: risk,
-            score: risk === 'High' ? 30 : risk === 'Medium' ? 65 : 90, // Example score
-            summaryText: `This contract for "${contractForNegotiation.name}" has an overall risk of ${risk}.`, // A generated summary
-            clauses: analysisData.map(c => ({
-                clauseTitle: c.clauseType,
-                clauseText: c.clauseText,
-                riskLevel: c.riskLevel
-            }))
-        }
-    };
+    const payload = { contractId: contractForNegotiation.id };
   
     try {
       console.log('🚨 Sending to agent:', payload);

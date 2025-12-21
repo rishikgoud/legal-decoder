@@ -54,22 +54,27 @@ export async function POST(req: Request) {
 
   try {
     // 2. Run the AI analysis
-    const analysis: DetectAndLabelClausesOutput = await detectAndLabelClauses({contractText});
+    const analysisResult: DetectAndLabelClausesOutput = await detectAndLabelClauses({contractText});
     console.log(`AI response received for analysis ID: ${analysisId}`);
+    
+    if (analysisResult.extractedEmails && analysisResult.extractedEmails.length > 0) {
+        console.log(`✉️ Extracted Emails:`, analysisResult.extractedEmails);
+    }
 
 
     // 3. Update DB record on success
-    const overallRisk = getOverallRisk(analysis);
-    const highRiskCount = analysis.filter(c => c.riskLevel === 'High').length;
+    const overallRisk = getOverallRisk(analysisResult.clauses);
+    const highRiskCount = analysisResult.clauses.filter(c => c.riskLevel === 'High').length;
 
     const {data: updatedRecord, error: updateError} = await supabaseAdmin
       .from('contract_analyses')
       .update({
         status: 'Analyzed',
         risk_level: overallRisk,
-        clauses_count: analysis.length,
+        clauses_count: analysisResult.clauses.length,
         high_risk_clauses_count: highRiskCount,
-        analysis_data: analysis,
+        analysis_data: analysisResult.clauses, // Store only the clauses array here
+        extracted_emails: analysisResult.extractedEmails, // Store emails in the new column
         analyzed_at: new Date().toISOString(),
       })
       .eq('id', analysisId)

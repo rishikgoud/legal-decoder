@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { DetectAndLabelClausesOutput } from '@/ai/schemas/detect-and-label-clauses-schema';
+import { Clause } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Loader2, UploadCloud, Bot, ShieldAlert } from 'lucide-react';
 import { Header } from '@/components/header';
@@ -28,7 +28,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
 function AnalyzePageComponent({ user }: { user: User }) {
   const [analysisResult, setAnalysisResult] =
-    useState<DetectAndLabelClausesOutput | null>(null);
+    useState<Clause[] | null>(null);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -89,7 +89,7 @@ function AnalyzePageComponent({ user }: { user: User }) {
       }
 
       if (result.data?.analysis_data) {
-        setAnalysisResult(result.data.analysis_data as DetectAndLabelClausesOutput);
+        setAnalysisResult(result.data.analysis_data as Clause[]);
         setAnalysisId(result.data.id); // Save the analysis ID
         toast({
             title: "Analysis Complete",
@@ -191,27 +191,7 @@ function AnalyzePageComponent({ user }: { user: User }) {
   
     setIsAgentRunning(true);
   
-    // Construct the payload as required by the backend
-    const risk = getOverallRisk(processedAnalysis);
-    const summary = processedAnalysis
-      .map((c) => c.summary)
-      .join(' ')
-      .slice(0, 1000); // Create a simple summary
-  
-    const payload = {
-      contractId: analysisId,
-      userId: user.id,
-      contractSummary: {
-        overallRisk: risk,
-        score: risk === 'High' ? 30 : risk === 'Medium' ? 65 : 90, // Example score
-        summaryText: `This contract for "${contractFileName}" has an overall risk of ${risk}.`, // A generated summary
-        clauses: processedAnalysis.map((c) => ({
-          clauseTitle: c.clauseType,
-          clauseText: c.clauseText,
-          riskLevel: c.riskLevel,
-        })),
-      },
-    };
+    const payload = { contractId: analysisId };
   
     try {
       console.log('🚨 Sending to agent:', payload);
