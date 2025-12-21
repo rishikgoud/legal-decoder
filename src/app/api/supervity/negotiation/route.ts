@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     const supervityPayload = {
       v2AgentId: SUPERVITY_AGENT_ID,
       v2SkillId: SUPERVITY_SKILL_ID,
-      inputText: JSON.stringify(agentInput),
+      inputText: JSON.stringify(agentInput), // Ensure the entire input object is a string
     };
     
     // 3. Trigger Supervity workflow
