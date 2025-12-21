@@ -3,12 +3,18 @@ import {NextResponse} from 'next/server';
 import {supabaseAdmin} from '@/lib/supabaseAdmin';
 import type {DetectAndLabelClausesOutput} from '@/ai/schemas/detect-and-label-clauses-schema';
 
-// This is the function that was missing the 'export' keyword.
 export async function POST(req: Request) {
   const {userId, contractId, contractText, analysisData} = await req.json();
 
   if (!userId || !contractId || !contractText || !analysisData) {
     return NextResponse.json({error: 'Missing required parameters'}, {status: 400});
+  }
+
+  // Verify all required environment variables are present.
+  const { SUPERVITY_AGENT_ID, SUPERVITY_SKILL_ID, SUPERVITY_API_TOKEN, SUPERVITY_ORG_ID } = process.env;
+  if (!SUPERVITY_AGENT_ID || !SUPERVITY_SKILL_ID || !SUPERVITY_API_TOKEN || !SUPERVITY_ORG_ID) {
+    console.error("Supervity environment variables are not fully configured.");
+    return NextResponse.json({ error: "Negotiation agent is not configured on the server." }, { status: 500 });
   }
 
   // Optional: Verify user owns the contract
@@ -18,13 +24,14 @@ export async function POST(req: Request) {
     .eq('id', contractId)
     .single();
 
-  if (contractError || contract.user_id !== userId) {
-    return NextResponse.json({error: 'Unauthorized access to contract'}, {status: 403});
+  if (contractError || !contract || contract.user_id !== userId) {
+    return NextResponse.json({error: 'Unauthorized or contract not found'}, {status: 403});
   }
 
   const supervityPayload = {
-    v2AgentId: process.env.SUPERVITY_AGENT_ID,
-    v2SkillId: process.env.SUPERVITY_SKILL_ID,
+    v2AgentId: SUPERVITY_AGENT_ID,
+    v2SkillId: SUPERVITY_SKILL_ID,
+    // Supervity expects `inputText` to be a string. We stringify the JSON object.
     inputText: JSON.stringify({
       contractId,
       contractText,
@@ -36,8 +43,8 @@ export async function POST(req: Request) {
     const response = await fetch('https://api.supervity.ai/botapi/draftSkills/v2/execute/', {
       method: 'POST',
       headers: {
-        'x-api-token': process.env.SUPERVITY_API_TOKEN!,
-        'x-api-org': process.env.SUPERVITY_ORG_ID!,
+        'x-api-token': SUPERVITY_API_TOKEN,
+        'x-api-org': SUPERVITY_ORG_ID,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(supervityPayload),
@@ -45,28 +52,26 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
         const errorBody = await response.text();
-        console.error("Supervity API Error:", errorBody);
-        throw new Error(`Supervity API failed with status: ${response.status}`);
+        console.error("Supervity API Error Response:", errorBody);
+        throw new Error(`Supervity API failed with status: ${response.status}. Body: ${errorBody}`);
     }
 
     const result = await response.json();
     
-    // NOTE: Storing execution logs is specified in the plan, but the immediate
-    // response from Supervity might not be the final result if it's async.
-    // For now, we'll assume a synchronous response for simplicity and log it.
-    // A more robust implementation would use webhooks.
+    // Log the successful trigger action to the database for auditing.
+    // A more robust implementation would use webhooks from Supervity to update the status upon completion.
     await supabaseAdmin.from('negotiation_actions').insert({
         contract_id: contractId,
         user_id: userId,
-        status: 'completed', // Assuming success
-        supervity_run_id: result.runId || null, // Example field
-        // recipient_email would come from agent's output
+        status: 'running', // The agent has been triggered and is now running.
+        supervity_run_id: result.runId || null,
     });
 
     return NextResponse.json({success: true, data: result});
 
   } catch (error: any) {
-    console.error('Error calling Supervity agent:', error);
+    console.error('Error calling Supervity agent:', error.message);
+    // Log the failure to the database.
     await supabaseAdmin.from('negotiation_actions').insert({
         contract_id: contractId,
         user_id: userId,

@@ -103,7 +103,7 @@ function DashboardStats({ contracts }: { contracts: Contract[] }) {
                     <CardTitle className="text-lg font-heading">Risk Distribution</CardTitle>
                     <CardDescription>Overall contract risk profile</CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 -mt-4 flex items-center justify-center">
+                <CardContent className="flex-1 flex items-center justify-center">
                   {stats.riskDistribution.length > 0 ? (
                     <ResponsiveContainer width="100%" height={150}>
                         <PieChart>
@@ -389,6 +389,16 @@ function DashboardPageComponent() {
   
   const confirmAndRunAgent = async () => {
     if (!contractForNegotiation || !user) return;
+    
+    if (!isNegotiationApproved) {
+        toast({
+            variant: 'destructive',
+            title: 'Approval Required',
+            description: 'You must approve the action before proceeding.',
+        });
+        return;
+    }
+
     setIsAgentRunning(true);
     
     try {
@@ -402,7 +412,6 @@ function DashboardPageComponent() {
           body: JSON.stringify({
             contractId: contractForNegotiation.id,
             userId: user.id,
-            riskLevel: contractForNegotiation.riskLevel,
             analysisData: contractForNegotiation.analysis_data,
             contractText: fullText
           }),
