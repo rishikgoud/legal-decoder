@@ -32,6 +32,7 @@ import { Label } from '@/components/ui/label';
 import Chat from '@/components/chat';
 import AnalysisReport from '@/components/analysis-report';
 import { getTranslatedAnalysis, type TranslateAnalysisOutput } from '@/app/actions';
+import { getOverallRisk } from '@/lib/utils';
 
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
@@ -401,12 +402,30 @@ function DashboardPageComponent() {
   
     setIsAgentRunning(true);
   
+    const analysisData = contractForNegotiation.analysis_data as DetectAndLabelClausesOutput;
+    const risk = getOverallRisk(analysisData);
+    
+    const payload = {
+        contractId: contractForNegotiation.id,
+        userId: user.id,
+        contractSummary: {
+            overallRisk: risk,
+            score: risk === 'High' ? 30 : risk === 'Medium' ? 65 : 90, // Example score
+            summaryText: `This contract for "${contractForNegotiation.name}" has an overall risk of ${risk}.`, // A generated summary
+            clauses: analysisData.map(c => ({
+                clauseTitle: c.clauseType,
+                clauseText: c.clauseText,
+                riskLevel: c.riskLevel
+            }))
+        }
+    };
+  
     try {
-      console.log('🚨 Sending to agent:', { contractId: contractForNegotiation.id, userId: user.id });
+      console.log('🚨 Sending to agent:', payload);
       const response = await fetch('/api/supervity/negotiation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contractId: contractForNegotiation.id, userId: user.id }),
+        body: JSON.stringify(payload),
       });
   
       const result = await response.json();
@@ -439,7 +458,7 @@ function DashboardPageComponent() {
         return processedAnalysis ? (
            <div className="relative">
                 <div className="container mx-auto max-w-7xl px-4 sm:px-6 md:px-8 mb-8">
-                  <Button onClick={handleStartNewAnalysis} variant="outline">
+                  <Button onClick={() => setCurrentView('dashboard')} variant="outline">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Dashboard
                   </Button>
@@ -456,7 +475,7 @@ function DashboardPageComponent() {
                         id: analysisId!,
                         name: contractFileName,
                         status: 'Analyzed',
-                        riskLevel: 'Medium', // Placeholder, will be recalculated
+                        riskLevel: getOverallRisk(processedAnalysis),
                         clauses: processedAnalysis.length,
                         analyzedAt: new Date().toISOString(),
                         analysis_data: processedAnalysis

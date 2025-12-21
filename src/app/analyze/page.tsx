@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { DetectAndLabelClausesOutput } from '@/ai/schemas/detect-and-label-clauses-schema';
 import { Button } from '@/components/ui/button';
@@ -178,47 +178,69 @@ function AnalyzePageComponent({ user }: { user: User }) {
   };
   
   const confirmAndRunAgent = async () => {
-    if (!analysisId) return;
-
+    if (!analysisId || !processedAnalysis) return;
+  
     if (!isNegotiationApproved) {
-        toast({
-            variant: 'destructive',
-            title: 'Approval Required',
-            description: 'You must approve the action before proceeding.',
-        });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Approval Required',
+        description: 'You must approve the action before proceeding.',
+      });
+      return;
     }
-
+  
     setIsAgentRunning(true);
-    
+  
+    // Construct the payload as required by the backend
+    const risk = getOverallRisk(processedAnalysis);
+    const summary = processedAnalysis
+      .map((c) => c.summary)
+      .join(' ')
+      .slice(0, 1000); // Create a simple summary
+  
+    const payload = {
+      contractId: analysisId,
+      userId: user.id,
+      contractSummary: {
+        overallRisk: risk,
+        score: risk === 'High' ? 30 : risk === 'Medium' ? 65 : 90, // Example score
+        summaryText: `This contract for "${contractFileName}" has an overall risk of ${risk}.`, // A generated summary
+        clauses: processedAnalysis.map((c) => ({
+          clauseTitle: c.clauseType,
+          clauseText: c.clauseText,
+          riskLevel: c.riskLevel,
+        })),
+      },
+    };
+  
     try {
-        console.log("🚨 Sending to agent:", { contractId: analysisId, userId: user.id });
-        const response = await fetch('/api/supervity/negotiation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contractId: analysisId, userId: user.id }),
-        });
-
-        const result = await response.json();
-        
-        if (!response.ok || result.error) {
-            throw new Error(result.error || result.details || 'Agent execution failed');
-        }
-
-        toast({
-            title: 'Negotiation Agent Started',
-            description: 'The AI is processing the negotiation workflow. You will be notified upon completion.',
-        });
-        
-    } catch(err: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Agent Failed',
-            description: err.message || 'Could not start the negotiation agent.',
-        });
+      console.log('🚨 Sending to agent:', payload);
+      const response = await fetch('/api/supervity/negotiation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok || result.error) {
+        throw new Error(result.error || result.details || 'Agent execution failed');
+      }
+  
+      toast({
+        title: 'Negotiation Agent Started',
+        description: 'The AI is processing the negotiation workflow. You will be notified upon completion.',
+      });
+  
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Agent Failed',
+        description: err.message || 'Could not start the negotiation agent.',
+      });
     } finally {
-        setIsAgentRunning(false);
-        setIsNegotiationModalOpen(false);
+      setIsAgentRunning(false);
+      setIsNegotiationModalOpen(false);
     }
   };
 
