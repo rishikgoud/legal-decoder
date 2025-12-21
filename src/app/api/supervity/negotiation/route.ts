@@ -28,15 +28,18 @@ export async function POST(req: Request) {
     return NextResponse.json({error: 'Unauthorized or contract not found'}, {status: 403});
   }
 
+  // **THE FIX**: Construct a rich input object for the agent, then stringify it.
+  const agentInput = {
+    contractId,
+    contractText,
+    analysis: analysisData,
+  };
+
   const supervityPayload = {
     v2AgentId: SUPERVITY_AGENT_ID,
     v2SkillId: SUPERVITY_SKILL_ID,
-    // Supervity expects `inputText` to be a string. We stringify the JSON object.
-    inputText: JSON.stringify({
-      contractId,
-      contractText,
-      analysis: analysisData,
-    }),
+    // Supervity expects `inputText` to be a single string. We stringify the JSON object.
+    inputText: JSON.stringify(agentInput),
   };
 
   try {
