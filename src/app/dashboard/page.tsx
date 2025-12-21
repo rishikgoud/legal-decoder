@@ -388,48 +388,48 @@ function DashboardPageComponent() {
   };
   
   const confirmAndRunAgent = async () => {
-    if (!contractForNegotiation) return;
-
+    if (!contractForNegotiation || !user) return;
+  
     if (!isNegotiationApproved) {
-        toast({
-            variant: 'destructive',
-            title: 'Approval Required',
-            description: 'You must approve the action before proceeding.',
-        });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Approval Required',
+        description: 'You must approve the action before proceeding.',
+      });
+      return;
     }
-
+  
     setIsAgentRunning(true);
-    
+  
     try {
-        console.log("🚨 Sending to agent:", { contractId: contractForNegotiation.id });
-        const response = await fetch('/api/supervity/negotiation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contractId: contractForNegotiation.id }),
-        });
-
-        const result = await response.json();
-        
-        if (!response.ok || result.error) {
-            throw new Error(result.error || result.details || 'Agent execution failed');
-        }
-
-        toast({
-            title: 'Negotiation Agent Started',
-            description: 'The AI is processing the negotiation workflow. You will be notified upon completion.',
-        });
-        
-    } catch(err: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Agent Failed',
-            description: err.message || 'Could not start the negotiation agent.',
-        });
+      console.log('🚨 Sending to agent:', { contractId: contractForNegotiation.id, userId: user.id });
+      const response = await fetch('/api/supervity/negotiation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId: contractForNegotiation.id, userId: user.id }),
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok || result.error) {
+        throw new Error(result.error || result.details || 'Agent execution failed');
+      }
+  
+      toast({
+        title: 'Negotiation Agent Started',
+        description: 'The AI is processing the negotiation workflow. You will be notified upon completion.',
+      });
+  
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Agent Failed',
+        description: err.message || 'Could not start the negotiation agent.',
+      });
     } finally {
-        setIsAgentRunning(false);
-        setIsNegotiationModalOpen(false);
-        setContractForNegotiation(null);
+      setIsAgentRunning(false);
+      setIsNegotiationModalOpen(false);
+      setContractForNegotiation(null);
     }
   };
 

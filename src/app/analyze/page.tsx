@@ -26,7 +26,7 @@ import { getOverallRisk } from '@/lib/utils';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
-function AnalyzePageComponent() {
+function AnalyzePageComponent({ user }: { user: User }) {
   const [analysisResult, setAnalysisResult] =
     useState<DetectAndLabelClausesOutput | null>(null);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
@@ -64,16 +64,6 @@ function AnalyzePageComponent() {
     // Reset translation state on new analysis
     setCurrentLang('en');
     setTranslatedAnalysis(null);
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        toast({
-            variant: 'destructive',
-            title: 'Authentication Error',
-            description: 'You must be logged in to analyze a contract.',
-        });
-        return;
-    }
 
     setIsLoading(true);
     setAnalysisResult(null);
@@ -202,11 +192,11 @@ function AnalyzePageComponent() {
     setIsAgentRunning(true);
     
     try {
-        console.log("🚨 Sending to agent:", { contractId: analysisId });
+        console.log("🚨 Sending to agent:", { contractId: analysisId, userId: user.id });
         const response = await fetch('/api/supervity/negotiation', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contractId: analysisId }),
+            body: JSON.stringify({ contractId: analysisId, userId: user.id }),
         });
 
         const result = await response.json();
@@ -428,10 +418,47 @@ function UploadSection({ onAnalyze }: { onAnalyze: (text: string, fileName: stri
   );
 }
 
+function AnalyzePageWrapper() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+    
+    // Initial check
+    supabase.auth.getUser().then(({ data: { user } }) => {
+        setUser(user);
+        setLoading(false);
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-[#0B0C10] to-[#1A1A2E] text-white">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    // This case will be handled by AuthGuard which redirects to login
+    return null;
+  }
+  
+  return <AnalyzePageComponent user={user} />;
+}
+
 export default function AnalyzePage() {
   return (
     <AuthGuard>
-      <AnalyzePageComponent />
+      <AnalyzePageWrapper />
     </AuthGuard>
   );
 }
