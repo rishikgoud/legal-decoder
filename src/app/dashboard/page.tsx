@@ -454,6 +454,15 @@ function DashboardPageComponent() {
                     onLanguageChange={handleLanguageChange}
                     currentLanguage={currentLang}
                     isTranslating={isTranslating}
+                    onStartNegotiation={() => handleStartNegotiation({
+                        id: analysisId!,
+                        name: contractFileName,
+                        status: 'Analyzed',
+                        riskLevel: 'Medium', // Placeholder, will be recalculated
+                        clauses: processedAnalysis.length,
+                        analyzedAt: new Date().toISOString(),
+                        analysis_data: processedAnalysis
+                    })}
                 />
                 <Dialog>
                   <DialogTrigger asChild>
@@ -595,3 +604,5 @@ export default function DashboardPage() {
     </AuthGuard>
   );
 }
+
+    

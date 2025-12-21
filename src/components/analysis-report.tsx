@@ -19,6 +19,7 @@ import {
   Link2,
   Languages,
   Loader2,
+  Bot,
 } from 'lucide-react';
 import {
   Accordion,
@@ -31,12 +32,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { getOverallRisk } from '@/lib/utils';
 
 
 type AnalysisReportProps = {
@@ -47,6 +45,7 @@ type AnalysisReportProps = {
   onLanguageChange: (lang: 'en' | 'hi' | 'te' | 'ta') => void;
   currentLanguage: 'en' | 'hi' | 'te' | 'ta';
   isTranslating: boolean;
+  onStartNegotiation?: () => void;
 };
 
 const riskLevelToVariant = (
@@ -70,10 +69,16 @@ export default function AnalysisReport({
   onLanguageChange,
   currentLanguage,
   isTranslating,
+  onStartNegotiation,
 }: AnalysisReportProps) {
   const { toast } = useToast();
+  
   const { summaryCards, overallRisk, riskScore } = useMemo(() => {
-    // Note: Calculations should always be based on the original, non-translated result.
+    const risk = getOverallRisk(analysisResult);
+    let score = 90;
+    if (risk === 'High') score = 30;
+    else if (risk === 'Medium') score = 65;
+
     const highRiskCount = analysisResult.filter(
       (c) => c.riskLevel === 'High'
     ).length;
@@ -83,16 +88,6 @@ export default function AnalysisReport({
     const lowRiskCount = analysisResult.filter(
       (c) => c.riskLevel === 'Low'
     ).length;
-
-    let risk = 'Low';
-    let score = 90;
-    if (highRiskCount > 0) {
-      risk = 'High';
-      score = 30;
-    } else if (mediumRiskCount > 0) {
-      risk = 'Medium';
-      score = 65;
-    }
 
     return {
       summaryCards: [
@@ -175,6 +170,8 @@ export default function AnalysisReport({
     }
   };
 
+  const canStartNegotiation = (overallRisk === 'Medium' || overallRisk === 'High');
+
 
   return (
     <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 animate-in fade-in duration-500">
@@ -191,7 +188,7 @@ export default function AnalysisReport({
             Analyzed {new Date().toLocaleString()}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
@@ -209,6 +206,18 @@ export default function AnalysisReport({
           </DropdownMenu>
 
           <Button variant="outline" onClick={onStartNew}><RotateCcw className="mr-2 h-4 w-4" /> New Analysis</Button>
+          
+          {onStartNegotiation && (
+            <Button 
+                onClick={onStartNegotiation} 
+                disabled={!canStartNegotiation} 
+                className="bg-accent hover:bg-accent/90"
+                title={!canStartNegotiation ? "Negotiation agent is recommended for Medium or High risk contracts." : "Start AI Negotiation"}
+            >
+                <Bot className="mr-2 h-4 w-4" /> Start Negotiation
+            </Button>
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button variant="outline"><Share2 className="mr-2 h-4 w-4" /> Share</Button>
@@ -333,3 +342,5 @@ export default function AnalysisReport({
     </div>
   );
 }
+
+    

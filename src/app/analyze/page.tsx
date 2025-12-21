@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { DetectAndLabelClausesOutput } from '@/ai/schemas/detect-and-label-clauses-schema';
 import { Button } from '@/components/ui/button';
-import { Loader2, UploadCloud, Bot } from 'lucide-react';
+import { Loader2, UploadCloud, Bot, ShieldAlert } from 'lucide-react';
 import { Header } from '@/components/header';
 import AuthGuard from '@/components/AuthGuard';
 import { User } from '@supabase/supabase-js';
@@ -18,6 +18,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import Chat from '@/components/chat';
 import { getTranslatedAnalysis } from '@/app/actions';
 import { type TranslateAnalysisOutput } from '@/ai/flows/translate-analysis-flow';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { getOverallRisk } from '@/lib/utils';
 
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
@@ -35,6 +39,11 @@ function AnalyzePageComponent() {
   const [translatedAnalysis, setTranslatedAnalysis] = useState<TranslateAnalysisOutput[] | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [currentLang, setCurrentLang] = useState<'en' | 'hi' | 'te' | 'ta'>('en');
+
+  // Negotiation State
+  const [isNegotiationModalOpen, setIsNegotiationModalOpen] = useState(false);
+  const [isNegotiationApproved, setIsNegotiationApproved] = useState(false);
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
 
   const processedAnalysis = useMemo(() => {
     if (currentLang === 'en' || !translatedAnalysis || translatedAnalysis.length !== analysisResult?.length) {
@@ -163,6 +172,72 @@ function AnalyzePageComponent() {
     }
   };
 
+  const handleStartNegotiation = () => {
+    if (processedAnalysis && analysisId) {
+      const risk = getOverallRisk(processedAnalysis);
+      if (risk === 'Medium' || risk === 'High') {
+        setIsNegotiationModalOpen(true);
+        setIsNegotiationApproved(false);
+      } else {
+        toast({
+          title: 'Negotiation Not Needed',
+          description: 'The negotiation agent is recommended for Medium or High risk contracts.',
+        });
+      }
+    }
+  };
+  
+  const confirmAndRunAgent = async () => {
+    if (!analysisId) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Authentication Error' });
+        return;
+    }
+
+    if (!isNegotiationApproved) {
+        toast({
+            variant: 'destructive',
+            title: 'Approval Required',
+            description: 'You must approve the action before proceeding.',
+        });
+        return;
+    }
+
+    setIsAgentRunning(true);
+    
+    try {
+        const response = await fetch('/api/supervity/negotiation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contractId: analysisId, userId: user.id }),
+        });
+
+        const result = await response.json();
+        
+        if (!response.ok || result.error) {
+            throw new Error(result.error || result.details || 'Agent execution failed');
+        }
+
+        toast({
+            title: 'Negotiation Agent Started',
+            description: 'The AI is processing the negotiation workflow. You will be notified upon completion.',
+        });
+        
+    } catch(err: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Agent Failed',
+            description: err.message || 'Could not start the negotiation agent.',
+        });
+    } finally {
+        setIsAgentRunning(false);
+        setIsNegotiationModalOpen(false);
+    }
+  };
+
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-gradient-to-br from-[#0B0C10] to-[#1A1A2E] text-white">
@@ -187,6 +262,7 @@ function AnalyzePageComponent() {
                     onLanguageChange={handleLanguageChange}
                     currentLanguage={currentLang}
                     isTranslating={isTranslating}
+                    onStartNegotiation={handleStartNegotiation}
                 />
                 <Dialog>
                   <DialogTrigger asChild>
@@ -206,6 +282,50 @@ function AnalyzePageComponent() {
           <UploadSection onAnalyze={handleAnalyze} />
         )}
       </main>
+
+       <AlertDialog open={isNegotiationModalOpen} onOpenChange={setIsNegotiationModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+                <Bot className="h-6 w-6 text-accent"/>
+                Confirm: Start Negotiation Assistant
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              The AI agent will analyze the contract's risks and draft a negotiation email. This action will be logged.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 space-y-4">
+             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                <div className="flex items-start gap-3">
+                    <ShieldAlert className="h-5 w-5 text-yellow-400 mt-1 flex-shrink-0" />
+                    <div>
+                        <h4 className="font-semibold text-yellow-300">Potential Risks Detected</h4>
+                        <p className="text-sm text-yellow-400/80">
+                            This contract has a risk level of <span className="font-bold">{processedAnalysis ? getOverallRisk(processedAnalysis) : 'N/A'}</span>. The agent will focus on mitigating these points.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div className="flex items-center space-x-2 mt-4">
+              <Checkbox id="negotiation-approval-analyze" checked={isNegotiationApproved} onCheckedChange={(checked) => setIsNegotiationApproved(!!checked)} />
+              <Label htmlFor="negotiation-approval-analyze" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                I understand and approve running the negotiation agent.
+              </Label>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+                onClick={confirmAndRunAgent}
+                disabled={!isNegotiationApproved || isAgentRunning}
+                className="bg-accent hover:bg-accent/90"
+            >
+              {isAgentRunning ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <Bot className="h-4 w-4 mr-2"/>}
+              {isAgentRunning ? 'Running...' : 'Proceed with Agent'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -321,3 +441,5 @@ export default function AnalyzePage() {
     </AuthGuard>
   );
 }
+
+    
