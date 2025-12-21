@@ -19,7 +19,21 @@ const AnswerContractQuestionsInputSchema = z.object({
 export type AnswerContractQuestionsInput = z.infer<typeof AnswerContractQuestionsInputSchema>;
 
 const AnswerContractQuestionsOutputSchema = z.object({
-  answer: z.string().describe('The answer to the question about the contract.'),
+  answer: z
+    .string()
+    .describe('A direct, concise answer to the user\'s question.'),
+  clauseText: z
+    .string()
+    .optional()
+    .describe(
+      'The full, original text of the single most relevant clause from the contract that supports the answer.'
+    ),
+  explanation: z
+    .string()
+    .optional()
+    .describe(
+      'A brief explanation of how the provided clauseText supports the answer.'
+    ),
 });
 export type AnswerContractQuestionsOutput = z.infer<typeof AnswerContractQuestionsOutputSchema>;
 
@@ -31,15 +45,27 @@ const prompt = ai.definePrompt({
   name: 'answerContractQuestionsPrompt',
   input: {schema: AnswerContractQuestionsInputSchema},
   output: {schema: AnswerContractQuestionsOutputSchema},
-  prompt: `You are a legal expert specializing in contracts.
+  prompt: `You are an expert legal assistant AI that answers specific questions about a contract.
 
-You will be provided with the text of a contract and a question about the contract.
+**Your Task:**
+1.  Read the user's question and the full contract text provided.
+2.  Provide a clear and direct answer to the question based *only* on the information within the contract.
+3.  Identify the *single most relevant clause* from the contract that directly supports your answer.
+4.  Provide a brief explanation of how that clause justifies your answer.
 
-Answer the question based on the information in the contract.
+**Rules:**
+-   If no relevant clause is found, you may omit the 'clauseText' and 'explanation' fields.
+-   Your answer must be accurate and derived strictly from the provided legal text.
+-   Return the response as a JSON object matching the defined schema.
 
-Contract Text: {{{contractText}}}
+**Contract Text:**
+\`\`\`
+{{{contractText}}}
+\`\`\`
 
-Question: {{{question}}}`,
+**User's Question:**
+"{{{question}}}"
+`,
 });
 
 const answerContractQuestionsFlow = ai.defineFlow(

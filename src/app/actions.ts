@@ -2,13 +2,17 @@
 'use server';
 
 import {detectAndLabelClauses} from '@/ai/flows/detect-and-label-clauses';
-import {answerContractQuestions} from '@/ai/flows/answer-contract-questions';
+import {answerContractQuestions, type AnswerContractQuestionsOutput} from '@/ai/flows/answer-contract-questions';
 import {compareContracts} from '@/ai/flows/compare-contracts-flow';
 import type { SelectedContract, MultiCompareContractsOutput } from '@/ai/schemas/compare-contracts-schema';
 import { translateAnalysis, type TranslateAnalysisInput, type TranslateAnalysisOutput } from '@/ai/flows/translate-analysis-flow';
 
 
-export async function askQuestion(contractText: string, question: string) {
+export async function askQuestion(contractText: string, question: string): Promise<{
+    success: boolean;
+    data: AnswerContractQuestionsOutput | null;
+    error: string | null;
+}> {
   if (!contractText || !question) {
     return {
       success: false,
