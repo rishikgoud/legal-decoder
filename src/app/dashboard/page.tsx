@@ -388,7 +388,7 @@ function DashboardPageComponent() {
   };
   
   const confirmAndRunAgent = async () => {
-    if (!contractForNegotiation || !user) return;
+    if (!contractForNegotiation) return;
 
     if (!isNegotiationApproved) {
         toast({
@@ -402,13 +402,11 @@ function DashboardPageComponent() {
     setIsAgentRunning(true);
     
     try {
+        console.log("🚨 Sending to agent:", { contractId: contractForNegotiation.id });
         const response = await fetch('/api/supervity/negotiation', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contractId: contractForNegotiation.id,
-                userId: user.id,
-            }),
+            body: JSON.stringify({ contractId: contractForNegotiation.id }),
         });
 
         const result = await response.json();

@@ -6,61 +6,67 @@ export async function POST(req: Request) {
   try {
     const { SUPERVITY_AGENT_ID, SUPERVITY_SKILL_ID, SUPERVITY_API_TOKEN, SUPERVITY_ORG_ID } = process.env;
     if (!SUPERVITY_AGENT_ID || !SUPERVITY_SKILL_ID || !SUPERVITY_API_TOKEN || !SUPERVITY_ORG_ID) {
-      console.error('Supervity environment variables are not fully configured.');
+      console.error('❌ Supervity environment variables are not fully configured.');
       return NextResponse.json({ error: 'Negotiation agent is not configured on the server.' }, { status: 500 });
     }
     
     console.log("🔥 NEGOTIATION API HIT");
 
-    const { contractId, userId } = await req.json();
-    console.log("📦 Incoming body:", { contractId, userId });
+    const { contractId } = await req.json();
+    console.log("📦 Incoming body:", { contractId });
 
-    if (!userId || !contractId) {
-        return NextResponse.json({ error: "Missing userId or contractId" }, { status: 400 });
+    if (!contractId) {
+        return NextResponse.json({ error: "Missing contractId" }, { status: 400 });
     }
 
-    // 1. Fetch analysis from DB
+    // 1️⃣ FETCH ANALYSIS DATA
     console.log(`🔎 Fetching analysis for contractId: ${contractId}`);
     const { data: contract, error: contractError } = await supabaseAdmin
       .from("contract_analyses")
       .select("*")
       .eq("id", contractId)
-      .eq("user_id", userId)
       .single();
 
     if (contractError || !contract) {
         console.error('❌ Contract fetch error:', contractError);
-        return NextResponse.json({ error: 'Unauthorized or contract not found' }, { status: 403 });
+        return NextResponse.json({ error: 'Contract not found or unauthorized' }, { status: 404 });
     }
     console.log("✅ Analysis fetched successfully.");
     
-    if (!contract.analysis_data || typeof contract.analysis_data !== 'object' || ('error' in (contract.analysis_data as object))) {
+    if (!contract.analysis_data || typeof contract.analysis_data !== 'object' || ('error' in (contract.analysis_data as object)) || !Array.isArray(contract.analysis_data)) {
         console.error('❌ Contract analysis data is missing or invalid.');
-        return NextResponse.json({ error: 'Contract analysis data is missing or invalid.' }, { status: 400 });
+        return NextResponse.json({ error: 'Contract analysis data is missing or invalid.' }, { status: 422 });
     }
 
-    // 2. Build the rich input object for the agent
+    // 2️⃣ BUILD FLAT INPUT (CRITICAL)
+    const clauses: any[] = contract.analysis_data;
+    const contractText = clauses.map(c => c.clauseText).join("\n\n");
+    const clauseTitles = clauses.map(c => c.clauseType).join(", ");
+    const clauseTexts = clauses.map(c => c.summary).join("\n\n");
+
     const agentInput = {
-      contract: {
-        id: contractId,
-        name: contract.file_name,
-      },
-      analysis: {
-        riskLevel: contract.risk_level,
-        clauses: contract.analysis_data,
-      },
-      userApproval: true,
+      contract_name: contract.file_name,
+      risk_level: contract.risk_level,
+      risk_summary: `This contract has an overall risk level of ${contract.risk_level}. Key areas of concern include clauses related to ${clauseTitles}.`,
+      contract_text: contractText.slice(0, 18000), // Safety slicing
+      clause_titles: clauseTitles,
+      clause_texts: clauseTexts
     };
     
-    console.log("🚀 AGENT INPUT PAYLOAD:", JSON.stringify(agentInput, null, 2));
-
+    if (!agentInput.contract_text || !agentInput.clause_titles) {
+      throw new Error("Failed to construct a valid input payload from analysis data.");
+    }
+    
     const supervityPayload = {
       v2AgentId: SUPERVITY_AGENT_ID,
       v2SkillId: SUPERVITY_SKILL_ID,
-      inputText: JSON.stringify(agentInput), // Ensure the entire input object is a string
+      inputText: JSON.stringify(agentInput),
     };
     
-    // 3. Trigger Supervity workflow
+    // 3️⃣ Log payload
+    console.log("🚀 AGENT INPUT PAYLOAD (stringified for inputText):", supervityPayload.inputText);
+
+    // 4️⃣ CALL SUPERVITY
     console.log("📡 Triggering Supervity workflow...");
     const response = await fetch('https://api.supervity.ai/v2/agents/run', {
       method: 'POST',
@@ -72,23 +78,31 @@ export async function POST(req: Request) {
       body: JSON.stringify(supervityPayload),
     });
 
-    const result = await response.json();
+    const resultText = await response.text();
+    console.log("📄 Supervity API Response Text:", resultText);
 
     if (!response.ok) {
-      console.error('❌ Supervity API Error Response:', result);
-      throw new Error(`Supervity API failed with status: ${response.status}. Details: ${result.error?.message || 'Unknown error'}`);
+      console.error('❌ Supervity API Error Response:', resultText);
+      throw new Error(`Supervity API failed with status: ${response.status}. Details: ${resultText}`);
     }
+    
+    let result;
+    try {
+      result = JSON.parse(resultText);
+    } catch(e) {
+      throw new Error(`Failed to parse Supervity JSON response: ${resultText}`);
+    }
+
     console.log("✅ Supervity workflow triggered successfully. Run ID:", result.runId);
 
-    // 4. Log successful trigger
+    // 5️⃣ Log successful trigger
     await supabaseAdmin.from('negotiation_actions').insert({
       contract_id: contractId,
-      user_id: userId,
+      user_id: contract.user_id,
       status: 'running',
       supervity_run_id: result.runId || null,
     });
     console.log("📝 Logged negotiation action to database.");
-
 
     return NextResponse.json({ success: true, data: result });
 

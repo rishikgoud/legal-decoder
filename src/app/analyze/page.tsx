@@ -190,13 +190,6 @@ function AnalyzePageComponent() {
   const confirmAndRunAgent = async () => {
     if (!analysisId) return;
 
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Authentication Error' });
-        return;
-    }
-
     if (!isNegotiationApproved) {
         toast({
             variant: 'destructive',
@@ -209,10 +202,11 @@ function AnalyzePageComponent() {
     setIsAgentRunning(true);
     
     try {
+        console.log("🚨 Sending to agent:", { contractId: analysisId });
         const response = await fetch('/api/supervity/negotiation', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contractId: analysisId, userId: user.id }),
+            body: JSON.stringify({ contractId: analysisId }),
         });
 
         const result = await response.json();
