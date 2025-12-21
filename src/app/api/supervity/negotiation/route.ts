@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing or incomplete contract summary data" }, { status: 400 });
     }
     
-    // 3. Fetch the contract from DB to get pre-extracted emails as a fallback/primary source
+    // 3. Fetch the contract from DB to get pre-extracted emails
     const { data: contractData, error: dbError } = await supabaseAdmin
         .from('contract_analyses')
         .select('extracted_emails')
@@ -52,10 +52,10 @@ export async function POST(req: Request) {
 
     if (dbError) {
         console.warn('⚠️ Supabase warning fetching emails for contract:', contractId, dbError.message);
-        // Do not fail; proceed with regex extraction.
+        // Do not fail; proceed with regex extraction as a fallback.
     }
 
-    // 4. Extract emails from the payload and combine with DB emails
+    // 4. Combine emails from DB and payload, then deduplicate
     const emailsFromPayload = extractEmails(contractSummary);
     const emailsFromDb = contractData?.extracted_emails || [];
     const allEmails = [...new Set([...emailsFromDb, ...emailsFromPayload])];
