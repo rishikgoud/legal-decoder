@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     console.log("📦 Incoming body:", { contractId, userId });
 
     if (!userId || !contractId) {
-      return NextResponse.json({ error: "Missing userId or contractId" }, { status: 400 });
+        return NextResponse.json({ error: "Missing userId or contractId" }, { status: 400 });
     }
 
     // 1. Fetch analysis from DB
