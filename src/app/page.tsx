@@ -10,7 +10,7 @@ import Rellax from 'rellax';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Preloader from '@/components/preloader';
-import demo_video from '../../public/demo_video.mp4';
+import demo_video from '../../public/illegalvideo.mp4';
 import Image from 'next/image';
 import img from '../../public/stop.png';
 
