@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ArrowRight, BarChart, Bot, FileText, UploadCloud, Users, Zap, Scale, ShieldCheck, Clock, Eye, Briefcase } from 'lucide-react';
@@ -149,15 +150,8 @@ export default function LandingPage() {
             {isLoading && <Preloader onComplete={() => setIsLoading(false)} />}
         </AnimatePresence>
         
-        <AnimatePresence>
         {!isLoading && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full h-full"
-        >
+        <div className="w-full h-full">
             <Header />
 
             <main className="flex-1 z-10">
@@ -173,7 +167,7 @@ export default function LandingPage() {
                     >
                         Your browser does not support the video tag.
                     </video>
-                    <div className="absolute inset-0 bg-black/60"></div>
+                    <div className="absolute inset-0"></div>
                     <div className="container relative mx-auto max-w-7xl px-6 sm:px-8 md:px-4">
                         <div className="grid md:grid-cols-2 gap-8 items-center">
                         <div className="w-full text-center md:text-left">
@@ -434,9 +428,8 @@ export default function LandingPage() {
                 </div>
                 </div>
             </footer>
-        </motion.div>
+        </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }
