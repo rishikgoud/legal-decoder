@@ -5,36 +5,45 @@ export async function POST(req: Request) {
   try {
     const { contractId, userId, contractSummary } = await req.json();
 
+    // 1. Validate Environment Variables
     if (!process.env.SUPERVITY_API_KEY || !process.env.SUPERVITY_ORG_ID || !process.env.SUPERVITY_AGENT_ID || !process.env.SUPERVITY_SKILL_ID) {
       console.error("❌ Missing Supervity environment variables");
       return NextResponse.json({ error: "Server configuration error: Missing Supervity credentials." }, { status: 500 });
     }
     
+    // 2. Validate Incoming Payload
     if (!contractId || !userId) {
       return NextResponse.json({ error: "Missing contractId or userId" }, { status: 400 });
     }
 
-    if (!contractSummary || !contractSummary.summaryText || !contractSummary.clauses) {
-      return NextResponse.json({ error: "Missing contract summary data" }, { status: 400 });
+    if (!contractSummary || !contractSummary.summaryText || !contractSummary.clauses || contractSummary.clauses.length === 0) {
+      return NextResponse.json({ error: "Missing or incomplete contract summary data" }, { status: 400 });
     }
     
-    // Construct the payload for Supervity
+    // 3. Construct the explicit input object for the agent
     const agentInput = {
-      contract_name: contractSummary.clauses.map((c:any) => c.clauseTitle).join(', '), // Create a name from clause titles
-      risk_level: contractSummary.overallRisk,
-      risk_summary: contractSummary.summaryText,
-      contract_text: contractSummary.clauses.map((c: any) => c.clauseText).join("\n\n"),
-      clauses: contractSummary.clauses,
+      contract_id: contractId,
+      user_id: userId,
+      contract_summary: contractSummary.summaryText,
+      overall_risk: contractSummary.overallRisk,
+      risk_score: contractSummary.score,
+      clauses: contractSummary.clauses.map((c: any) => ({
+        title: c.clauseTitle,
+        text: c.clauseText,
+        risk: c.riskLevel
+      }))
     };
 
+    // 4. Construct the final Supervity payload, stringifying the agent input
     const supervityPayload = {
       v2AgentId: process.env.SUPERVITY_AGENT_ID,
       v2SkillId: process.env.SUPERVITY_SKILL_ID,
-      inputText: JSON.stringify(agentInput),
+      inputText: JSON.stringify(agentInput), // CRITICAL: Input must be a stringified JSON
     };
 
     console.log("🚀 Sending to Supervity:", JSON.stringify(supervityPayload, null, 2));
 
+    // 5. Call the Supervity API
     const response = await fetch("https://api.supervity.ai/botapi/draftSkills/v2/execute/", {
       method: "POST",
       headers: {
@@ -45,20 +54,20 @@ export async function POST(req: Request) {
       body: JSON.stringify(supervityPayload),
     });
 
+    const result = await response.json();
+
     if (!response.ok) {
-      const errorBody = await response.text();
-      console.error("❌ Supervity API Error:", response.status, errorBody);
-      throw new Error(`Supervity API failed with status ${response.status}: ${errorBody}`);
+      console.error("❌ Supervity API Error:", response.status, result);
+      throw new Error(result.message || `Supervity API failed with status ${response.status}`);
     }
 
-    const result = await response.json();
     console.log("✅ Supervity agent executed successfully:", result);
     return NextResponse.json({ success: true, data: result });
 
   } catch (err: any) {
     console.error("❌ Negotiation API failed:", err.message);
     return NextResponse.json(
-      { error: err.message || "An unexpected error occurred." },
+      { error: "Failed to execute negotiation agent.", details: err.message },
       { status: 500 }
     );
   }
