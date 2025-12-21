@@ -30,6 +30,7 @@ function AnalyzePageComponent({ user }: { user: User }) {
   const [analysisResult, setAnalysisResult] =
     useState<Clause[] | null>(null);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [extractedEmails, setExtractedEmails] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [contractText, setContractText] = useState('');
@@ -68,6 +69,7 @@ function AnalyzePageComponent({ user }: { user: User }) {
     setIsLoading(true);
     setAnalysisResult(null);
     setAnalysisId(null);
+    setExtractedEmails([]);
 
     try {
       const response = await fetch('/api/analyze', {
@@ -88,9 +90,10 @@ function AnalyzePageComponent({ user }: { user: User }) {
         throw new Error(result.error || 'Analysis failed');
       }
 
-      if (result.data?.analysis_data) {
+      if (result.data) {
         setAnalysisResult(result.data.analysis_data as Clause[]);
-        setAnalysisId(result.data.id); // Save the analysis ID
+        setAnalysisId(result.data.id);
+        setExtractedEmails(result.data.extracted_emails || []);
         toast({
             title: "Analysis Complete",
             description: "Your contract report is ready below."
@@ -115,6 +118,7 @@ function AnalyzePageComponent({ user }: { user: User }) {
     setContractText('');
     setContractFileName('New Contract');
     setIsLoading(false);
+    setExtractedEmails([]);
     // Reset translation state
     setTranslatedAnalysis(null);
     setCurrentLang('en');
@@ -199,6 +203,7 @@ function AnalyzePageComponent({ user }: { user: User }) {
     const payload = {
         contractId: analysisId,
         userId: user.id,
+        extractedEmails: extractedEmails || [],
         contractSummary: {
             overallRisk: overallRisk,
             score: score,

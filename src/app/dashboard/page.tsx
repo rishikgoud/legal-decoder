@@ -213,6 +213,7 @@ function DashboardPageComponent() {
             analyzedAt: item.analyzed_at,
             highRiskClauses: item.high_risk_clauses_count,
             analysis_data: item.analysis_data,
+            extracted_emails: item.extracted_emails,
           })
         );
         setContracts(formattedData);
@@ -411,6 +412,7 @@ function DashboardPageComponent() {
     const payload = {
         contractId: contractForNegotiation.id,
         userId: user.id,
+        extractedEmails: contractForNegotiation.extracted_emails || [],
         contractSummary: {
             overallRisk: overallRisk,
             score: score,
@@ -481,7 +483,8 @@ function DashboardPageComponent() {
                         riskLevel: getOverallRisk(processedAnalysis),
                         clauses: processedAnalysis.length,
                         analyzedAt: new Date().toISOString(),
-                        analysis_data: processedAnalysis
+                        analysis_data: processedAnalysis,
+                        extracted_emails: contracts.find(c => c.id === analysisId)?.extracted_emails || []
                     })}
                 />
                 <Dialog>

@@ -1,38 +1,18 @@
 
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
-const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-
-/**
- * Extracts unique email addresses from the contract summary and clauses.
- * @param contractSummary The contract summary object.
- * @returns An array of unique email strings.
- */
-function extractEmails(contractSummary: any): string[] {
-  if (!contractSummary) return [];
-
-  const textToScan = [
-    contractSummary.summaryText,
-    ...(contractSummary.clauses?.map((c: any) => c.clauseText) || [])
-  ].join(" ");
-
-  const emails = textToScan.match(EMAIL_REGEX) || [];
-  return [...new Set(emails)];
-}
-
 export async function POST(req: Request) {
   try {
-    // 1. Validate Environment Variables
+    // 1. Validate Environment Variables for Supervity API v2
     if (!process.env.SUPERVITY_API_KEY || !process.env.SUPERVITY_ORG_ID || !process.env.SUPERVITY_AGENT_ID || !process.env.SUPERVITY_SKILL_ID) {
       console.error("❌ Missing Supervity environment variables");
       return NextResponse.json({ error: "Server configuration error: Missing Supervity credentials." }, { status: 500 });
     }
     
-    // 2. Validate Incoming Payload
-    const { contractId, userId, contractSummary } = await req.json();
+    // 2. Validate Incoming Payload from Frontend
+    const { contractId, userId, contractSummary, extractedEmails } = await req.json();
     console.log("🟡 Negotiation API hit for contractId:", contractId);
 
     if (!contractId || !userId) {
@@ -43,26 +23,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing or incomplete contract summary data" }, { status: 400 });
     }
     
-    // 3. Fetch the contract from DB to get pre-extracted emails
-    const { data: contractData, error: dbError } = await supabaseAdmin
-        .from('contract_analyses')
-        .select('extracted_emails')
-        .eq('id', contractId)
-        .single();
+    // Use the emails passed from the frontend, with a fallback.
+    const finalExtractedEmails = extractedEmails && extractedEmails.length > 0 ? extractedEmails : ["NO_EMAIL_FOUND"];
 
-    if (dbError) {
-        console.warn('⚠️ Supabase warning fetching emails for contract:', contractId, dbError.message);
-        // Do not fail; proceed with regex extraction as a fallback.
-    }
-
-    // 4. Combine emails from DB and payload, then deduplicate
-    const emailsFromPayload = extractEmails(contractSummary);
-    const emailsFromDb = contractData?.extracted_emails || [];
-    const allEmails = [...new Set([...emailsFromDb, ...emailsFromPayload])];
-
-    const finalExtractedEmails = allEmails.length > 0 ? allEmails : ["NO_EMAIL_FOUND"];
-
-    // 5. Construct the explicit input object for the agent
+    // 3. Construct the explicit input object for the agent
     const agentInput = {
       contract_id: contractId,
       user_id: userId,
@@ -77,7 +41,7 @@ export async function POST(req: Request) {
       }))
     };
 
-    // 6. Construct the FormData payload for Supervity v2 API
+    // 4. Construct the FormData payload for Supervity v2 API
     const formData = new FormData();
     formData.append('v2AgentId', process.env.SUPERVITY_AGENT_ID!);
     formData.append('v2SkillId', process.env.SUPERVITY_SKILL_ID!);
@@ -90,7 +54,7 @@ export async function POST(req: Request) {
     console.log("🚀 Sending FormData to Supervity...");
     console.log("📋 Payload Content to be sent in inputpayload.txt:", JSON.stringify(agentInput, null, 2));
 
-    // 7. Call the Supervity API
+    // 5. Call the Supervity API
     const response = await fetch("https://api.supervity.ai/botapi/draftSkills/v2/execute/", {
       method: "POST",
       headers: {
