@@ -10,6 +10,7 @@ import Rellax from 'rellax';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Preloader from '@/components/preloader';
+import demo_video from '../../public/demo_video.mp4';
 import Image from 'next/image';
 import img from '../../public/stop.png';
 
@@ -169,7 +170,7 @@ export default function LandingPage() {
                         muted
                         playsInline
                         className="absolute top-0 left-0 w-full h-full object-cover -z-10 grayscale"
-                        src="/demo_video.mp4"
+                        src="demo_video"
                     >
                         Your browser does not support the video tag.
                     </video>
